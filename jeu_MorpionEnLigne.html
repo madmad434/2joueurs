@@ -228,6 +228,14 @@
   #ov-wait { font-size:.82rem; font-weight:700; color:var(--text-muted); display:none; }
 
   ol.help { margin:0; padding-left:20px; display:flex; flex-direction:column; gap:9px; font-size:.85rem; color:#1e293b; line-height:1.5; }
+
+  /* ── Ajouts : fenêtre d'historique et boutons du bandeau ── */
+  #hist-modal { z-index:170; }
+  #hist-modal #history-list { display:flex; flex-direction:column; gap:5px; max-height:52vh; overflow-y:auto; margin-top:0; }
+  #hist-modal .hist-item { background:var(--accent-light); border:1px solid var(--input-border); padding:5px 10px; }
+  #hist-empty { font-size:.85rem; color:var(--text-muted); font-weight:700; text-align:center; padding:18px 0; }
+  #btn-hist { margin-left:auto; }
+  #btn-quit { margin-left:0 !important; }
 </style>
 </head>
 <body>
@@ -270,8 +278,10 @@
     <button class="btn primary" id="btn-start">▶ Lancer la manche</button>
     <button class="btn btn-net" id="btn-connect">🌐 Connexion</button>
     <button class="btn btn-aide-toggle" id="btn-aide-toggle">❓ Aide</button>
-    <a class="btn" href="index.html" style="text-decoration:none">🏠 Menu</a>
-    <button class="btn danger" id="btn-quit">✕ Quitter</button>
+    <button class="btn" id="btn-hist">📜 Historique</button>
+    <button class="btn" id="btn-sound">🔊 Son</button>
+    <button class="btn" id="btn-quit">⟲ Réinitialiser</button>
+    <button class="btn danger" id="btn-menu">✕ Quitter</button>
   </div>
 
   <!-- BANDEAU RÉSEAU -->
@@ -335,11 +345,6 @@
           <input type="text" id="chat-input" maxlength="120" placeholder="Message…">
           <button class="btn" id="chat-send">➤</button>
         </div>
-      </div>
-
-      <div>
-        <div class="side-section-title">Historique des coups</div>
-        <div id="history-list"></div>
       </div>
     </div>
 
@@ -432,8 +437,25 @@
       <li>La <strong>discussion</strong> du panneau latéral permet d'échanger des messages et des réactions rapides pendant la partie.</li>
       <li><strong>Mode local :</strong> les deux joueurs partagent le même écran, sans aucune connexion réseau.</li>
     </ol>
+    <p style="font-size:.85rem;line-height:1.6;color:#1e293b;margin-top:2px;"><strong>Boutons communs du bandeau :</strong> <b>📜 Historique</b> ouvre le relevé de la partie, que l'on peut imprimer ; il est aussi accessible depuis la fenêtre de fin de manche. <b>🔊 Son</b> coupe ou rétablit les effets sonores, et le choix est mémorisé. <b>⟲ Réinitialiser</b> arrête la partie en cours sans quitter la page. <b>✕ Quitter</b> revient au menu.</p>
     <div class="note">🌐 Pour utiliser le mode en ligne, le fichier doit être servi en <strong>HTTPS</strong> (GitHub Pages, Netlify, Vercel…) — WebRTC est bloqué sur un simple fichier local <em>file://</em> dans certains navigateurs.</div>
     <button class="btn primary" id="btn-aide-ok" style="align-self:center;">OK</button>
+  </div>
+</div>
+
+<!-- MODALE HISTORIQUE -->
+<div class="modal" id="hist-modal">
+  <div class="modal-card">
+    <div class="modal-head">
+      <h2>📜 Historique des coups</h2>
+      <button class="modal-close" id="hist-close">✕</button>
+    </div>
+    <div id="history-list"></div>
+    <div id="hist-empty">Aucun coup enregistré pour l'instant.</div>
+    <div class="overlay-buttons">
+      <button class="btn btn-net" id="hist-print">🖨 Imprimer</button>
+      <button class="btn primary" id="hist-ok">Fermer</button>
+    </div>
   </div>
 </div>
 
@@ -450,6 +472,7 @@
     <div class="overlay-buttons">
       <button class="btn primary" id="ov-next">▶ Manche suivante</button>
       <button class="btn btn-net" id="ov-ask">🙋 Demander une revanche</button>
+      <button class="btn" id="ov-hist">📜 Historique de la manche</button>
       <button class="btn" id="ov-close">👁 Voir la grille</button>
     </div>
   </div>
@@ -1071,6 +1094,113 @@
   } else {
     $("net-modal").classList.add("show");
   }
+})();
+</script>
+
+<script>
+/* ══════════════════════════════════════════════════════════════════════
+   Ajouts communs à la collection : son, historique en fenêtre, retour au
+   menu. Ce bloc est indépendant du moteur de jeu ci-dessus : il ne fait
+   que brancher des écouteurs sur des éléments existants.
+   ══════════════════════════════════════════════════════════════════════ */
+(function () {
+  "use strict";
+  const $ = (id) => document.getElementById(id);
+  const esc = (s) => String(s).replace(/[&<>"']/g, (m) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[m]));
+
+  /* ── Son ── */
+  const SND = { on: true, ctx: null };
+  try { SND.on = localStorage.getItem("jeux2.sound") !== "0"; } catch (e) {}
+  function actx() {
+    if (!SND.ctx) { try { SND.ctx = new (window.AudioContext || window.webkitAudioContext)(); } catch (e) { SND.ctx = null; } }
+    return SND.ctx;
+  }
+  function tone(f, dur, type, gain, delay) {
+    const c = actx(); if (!c) return;
+    if (c.state === "suspended") { try { c.resume(); } catch (e) {} }
+    const t0 = c.currentTime + (delay || 0), d = dur || 0.12;
+    const o = c.createOscillator(), g = c.createGain();
+    o.type = type || "triangle";
+    o.frequency.setValueAtTime(f, t0);
+    g.gain.setValueAtTime(0.0001, t0);
+    g.gain.exponentialRampToValueAtTime(gain || 0.16, t0 + 0.012);
+    g.gain.exponentialRampToValueAtTime(0.0001, t0 + d);
+    o.connect(g); g.connect(c.destination);
+    o.start(t0); o.stop(t0 + d + 0.03);
+  }
+  function snd(n) {
+    if (!SND.on) return;
+    if (n === "click") tone(520, .07, "square", .11);
+    else if (n === "draw") tone(700, .10, "sine", .11);
+    else if (n === "win") [523, 659, 784, 1047].forEach((f, i) => tone(f, .18, "triangle", .15, i * .11));
+    else if (n === "lose") [523, 415, 330, 262].forEach((f, i) => tone(f, .20, "triangle", .13, i * .12));
+  }
+  function renderSound() {
+    const b = $("btn-sound");
+    b.textContent = SND.on ? "🔊 Son" : "🔇 Muet";
+    b.classList.toggle("danger", !SND.on);
+  }
+  $("btn-sound").addEventListener("click", function () {
+    SND.on = !SND.on;
+    try { localStorage.setItem("jeux2.sound", SND.on ? "1" : "0"); } catch (e) {}
+    renderSound(); if (SND.on) snd("click");
+  });
+  renderSound();
+
+  /* Coup joué : petit clic. Fin de manche : fanfare ou déception. */
+  const board = $("board");
+  if (board) board.addEventListener("click", function (e) { if (e.target.closest(".cell")) snd("click"); });
+
+  const ov = $("overlay");
+  let wasShown = false;
+  new MutationObserver(function () {
+    const shown = ov.classList.contains("show");
+    if (shown && !wasShown) {
+      const t = $("ov-title").textContent || "";
+      const local = ($("net-text").textContent || "").indexOf("local") >= 0;
+      if (t.indexOf("🤝") === 0) snd("draw");
+      else if (t.indexOf("🎉") === 0) snd("win");
+      else snd(local ? "win" : "lose");
+    }
+    wasShown = shown;
+  }).observe(ov, { attributes: true, attributeFilter: ["class"] });
+
+  /* ── Historique en fenêtre ── */
+  function openHist() {
+    $("hist-empty").style.display = $("history-list").children.length ? "none" : "block";
+    $("hist-modal").classList.add("show");
+  }
+  function closeHist() { $("hist-modal").classList.remove("show"); }
+  $("btn-hist").addEventListener("click", openHist);
+  $("hist-close").addEventListener("click", closeHist);
+  $("hist-ok").addEventListener("click", closeHist);
+  $("ov-hist").addEventListener("click", openHist);
+  $("hist-print").addEventListener("click", function () {
+    const rows = Array.prototype.map.call(document.querySelectorAll("#history-list .hist-item"), function (el) {
+      return "<tr>" + Array.prototype.map.call(el.children, function (s) { return "<td>" + esc(s.textContent) + "</td>"; }).join("") + "</tr>";
+    }).join("");
+    const titre = document.title.split("—")[0].trim();
+    const n1 = $("pc-name-1").textContent, n2 = $("pc-name-2").textContent;
+    const w = window.open("", "_blank", "width=720,height=820");
+    if (!w) return;
+    w.document.write('<!DOCTYPE html><html lang="fr"><head><meta charset="utf-8"><title>Historique — ' + titre +
+      '</title><style>body{font-family:Segoe UI,Arial,sans-serif;color:#06283d;padding:26px}' +
+      'h1{font-size:1.25rem;margin:0 0 4px}p{font-size:.85rem;color:#0a5b80;margin:0 0 14px}' +
+      'table{border-collapse:collapse;width:100%;font-size:.85rem}' +
+      'td,th{border:1px solid #7dd3f0;padding:5px 9px;text-align:left}th{background:#e0f6ff}</style></head><body>' +
+      "<h1>" + titre + " — historique de la partie</h1><p>" + esc(n1) + " contre " + esc(n2) + " — " +
+      new Date().toLocaleString("fr-FR") + "</p><table>" +
+      (rows || "<tr><td>Aucun coup enregistré.</td></tr>") + "</table></body></html>");
+    w.document.close(); w.focus();
+    setTimeout(function () { try { w.print(); } catch (e) {} }, 350);
+  });
+
+  /* ── Quitter : retour au menu ── */
+  $("btn-menu").addEventListener("click", function () { location.href = "index.html"; });
+
+  document.addEventListener("keydown", function (e) {
+    if (e.key === "Escape") closeHist();
+  });
 })();
 </script>
 </body>

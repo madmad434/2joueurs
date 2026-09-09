@@ -9,8 +9,8 @@ qu'un menu de lancement.
 | 1 | Morpion | `jeu_MorpionEnLigne.html` | coup + état renvoyé par l'hôte |
 | 2 | Jeu de dames | `jeu_dames_enligne.html` | coup + état renvoyé par l'hôte |
 | 3 | Awalé | `jeu_awale_enligne.html` | coup + état renvoyé par l'hôte |
-| 4 | Flappy Comète | `jeu_flappycomete_enligne.html` | graine au départ, score à l'arrivée |
-| 5 | Comet Survival | `jeu_cometsurvival_enligne.html` | graine au départ, score à l'arrivée |
+| 4 | Comète | `jeu_comete_enligne.html` | graine au départ, score à l'arrivée |
+| 5 | Météorite | `jeu_meteorite_enligne.html` | graine au départ, score à l'arrivée |
 | 6 | Pong Néon | `jeu_pongneon_enligne.html` | temps réel, l'hôte fait autorité |
 
 ---
@@ -95,18 +95,35 @@ L'hôte joue la rangée du **bas** et commence.
   son camp.
 * Le semis est animé, graine par graine, à environ 80 ms par graine.
 
-### 4 — Flappy Comète
-Une comète, un seul bouton (clic, tap ou **Espace**) qui donne une impulsion vers
-le haut ; sinon elle tombe. +1 par barrière franchie, vitesse croissante par
-paliers à 10, 25, 50 et 100 points. Toucher une barrière ou le sol fige le score.
-Les deux joueurs volent **en même temps sur le même parcours** ; meilleur score
-gagne la manche, duel au meilleur des trois, égalité rejouée.
+### 4 — Comète
+Une comète, un seul bouton (clic, tap ou la touche choisie) qui donne une
+impulsion vers le haut ; sinon elle tombe. +1 par barrière franchie, vitesse
+croissante par paliers à 10, 25, 50 et 100 points. Toucher une barrière ou le sol
+fige le score. Les deux joueurs volent **en même temps sur le même parcours** ;
+meilleur score gagne la manche, duel au meilleur des trois, égalité rejouée.
 
-### 5 — Comet Survival
-Un personnage (← → pour se déplacer, ↑ pour sauter ; trois touches tactiles sur
-téléphone) sous une pluie de comètes tombant en diagonale. Manche de 90 secondes
-au plus ; le score est le temps de survie au dixième de seconde. Difficulté par
-paliers à 20 s, 45 s et 70 s. Même averse pour les deux joueurs, meilleur des trois.
+Réglages du bandeau :
+
+* **Joueurs** — *2 joueurs (duel)* ou *1 joueur (solo)*. En solo, ni adversaire ni
+  connexion : le record est conservé sur l'appareil.
+* **Vitesse** — lente, normale, rapide, très rapide. En duel, la vitesse choisie
+  par l'hôte est transmise avec la graine et s'applique aux deux joueurs.
+* **Touche d'impulsion** — Espace, ↑, W/Z ou Entrée. Le clic et le tap
+  fonctionnent toujours.
+
+### 5 — Météorite
+Un personnage sous une pluie de météorites tombant en diagonale. Manche de
+90 secondes au plus ; le score est le temps de survie au dixième de seconde.
+Difficulté par paliers à 20 s, 45 s et 70 s. Même averse pour les deux joueurs,
+meilleur des trois.
+
+Réglages du bandeau :
+
+* **Joueurs** — duel ou solo, avec record conservé sur l'appareil.
+* **Vitesse de chute** — lente à très rapide ; en duel, le réglage de l'hôte
+  s'applique aux deux joueurs.
+* **Touches** — *Flèches ← → ↑*, *AZERTY (Q D Z)* ou *QWERTY (A D W)* ; Espace
+  saute toujours. Sur téléphone, trois touches tactiles s'affichent sur la scène.
 
 ### 6 — Pong Néon
 Tennis des années 80 : la raquette suit la souris ou le doigt (↑ / ↓ au clavier).
@@ -120,13 +137,29 @@ accélère à chaque échange et l'angle de renvoi dépend du point d'impact. Pr
 
 Tous les jeux partagent la même charte graphique et la même disposition :
 
-* **Bandeau de configuration** — titre, réglages du jeu, pseudo, `▶ Lancer`,
-  `🌐 Connexion`, `❓ Aide`, `🏠 Menu`, `✕ Quitter`.
+* **Bandeau de configuration** — titre, réglages du jeu, pseudo, puis les boutons
+  communs :
+
+  | Bouton | Rôle |
+  |---|---|
+  | `▶ Lancer` | démarre une manche (réservé à l'hôte en ligne) |
+  | `🌐 Connexion` | créer, rejoindre, ou passer en local |
+  | `📜 Historique` | relevé de la partie dans une fenêtre, avec `🖨 Imprimer` |
+  | `🔊 Son` / `🔇 Muet` | coupe ou rétablit les effets sonores, choix mémorisé pour les six jeux |
+  | `❓ Aide` | règles et fonctionnement réseau du jeu |
+  | `⟲ Réinitialiser` | arrête la partie en cours sans quitter la page |
+  | `✕ Quitter` | revient au menu |
 * **Bandeau réseau** — état de la liaison, code de salle, lien d'invitation,
   latence mesurée.
 * **Barre de statistiques** — cinq indicateurs propres au jeu.
 * **Panneau latéral** — les deux joueurs et leur score, une discussion avec
-  réactions rapides, l'historique des coups ou des scores. Masqué sous 900 px.
+  réactions rapides. Masqué sous 900 px.
+* **Historique** — il n'occupe plus le panneau latéral : il s'ouvre en fenêtre par
+  le bouton `📜 Historique`, et la fenêtre de fin de manche propose le même
+  relevé, imprimable.
+* **Son** — effets synthétisés à la volée (WebAudio), aucun fichier audio :
+  pose d'un pion, semis et capture, rebond et point, décompte, victoire ou
+  défaite. L'état actif/muet est partagé par les six jeux.
 * **Fenêtres modales** — connexion, aide détaillée, fin de manche.
 * Touche **Échap** : ferme toute fenêtre ouverte.
 
@@ -139,12 +172,12 @@ Tous les jeux partagent la même charte graphique et la même disposition :
 | Famille | Messages échangés |
 |---------|-------------------|
 | Morpion, Dames, Awalé | `{"type":"coup", …}` puis un état complet renvoyé par l'hôte. Les deux postes appliquent la même fonction de règles : l'état reste identique des deux côtés. |
-| Flappy Comète, Comet Survival | `{"type":"seed","seed":…}` à la connexion, `{"type":"score","value":…}` à la mort. Rien entre les deux. |
+| Comète, Météorite | `{"type":"seed","seed":…,"mul":…}` au lancement de la manche (graine **et** réglage de vitesse), `{"type":"score","value":…}` à la mort. Rien entre les deux. |
 | Pong Néon | Temps réel : l'invité envoie `{"type":"pos","y":…}` ~30 fois/s ; l'hôte, seul arbitre, diffuse `{"type":"ball", …}`. L'invité ne simule rien. |
 
 ### Déterminisme des jeux d'action
 
-Contrat respecté par Flappy Comète et Comet Survival :
+Contrat respecté par Comète et Météorite :
 
 * générateur pseudo-aléatoire **mulberry32** — même graine, même séquence ;
 * simulation à **pas fixe** (60 pas par seconde de temps écoulé, jamais image par
@@ -170,8 +203,8 @@ Contrat respecté par Flappy Comète et Comet Survival :
     jeu_MorpionEnLigne.html           jeu 1
     jeu_dames_enligne.html            jeu 2
     jeu_awale_enligne.html            jeu 3
-    jeu_flappycomete_enligne.html     jeu 4
-    jeu_cometsurvival_enligne.html    jeu 5
+    jeu_comete_enligne.html           jeu 4
+    jeu_meteorite_enligne.html        jeu 5
     jeu_pongneon_enligne.html         jeu 6
     demarrer-serveur-local.cmd        serveur de test (Windows)
     demarrer-serveur-local.sh         serveur de test (macOS / Linux)
@@ -199,3 +232,5 @@ Firefox, Safari). Les jeux d'action utilisent `<canvas>` et des événements
 | Rien ne se connecte en `file://` | WebRTC bloqué hors HTTPS | Passer par un serveur local ou publier le dossier |
 | Connexion impossible au bureau | VPN ou pare-feu d'entreprise filtrant WebRTC | Essayer en partage de connexion mobile |
 | Panneau latéral absent | Fenêtre de moins de 900 px | Élargir la fenêtre, ou continuer sans (facultatif) |
+| Aucun son | Bouton sur `🔇 Muet`, ou onglet jamais cliqué | Cliquer sur `🔊 Son` ; les navigateurs n'autorisent le son qu'après une première interaction |
+| La fenêtre d'impression ne s'ouvre pas | Bloqueur de fenêtres surgissantes | Autoriser les fenêtres pour ce site |

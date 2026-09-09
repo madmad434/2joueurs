@@ -316,6 +316,12 @@
     .store { width:70px; min-height:170px; }
   }
 
+  /* ── Fenêtre d'historique ── */
+  #hist-modal { z-index:170; }
+  #hist-modal #history-list { display:flex; flex-direction:column; gap:5px; max-height:52vh; overflow-y:auto; margin-top:0; }
+  #hist-modal .hist-item { background:var(--accent-light); border:1px solid var(--input-border); padding:5px 10px; }
+  #hist-empty { font-size:.85rem; color:var(--text-muted); font-weight:700; text-align:center; padding:18px 0; }
+
 </style>
 </head>
 <body>
@@ -332,8 +338,10 @@
     <div class="separator"></div>
     <button class="btn primary" id="btn-start">▶ Lancer la manche</button>
     <button class="btn btn-net" id="btn-connect">🌐 Connexion</button>
+    <button class="btn" id="btn-hist">📜 Historique</button>
+    <button class="btn" id="btn-sound">🔊 Son</button>
     <button class="btn btn-aide-toggle" id="btn-aide-toggle">❓ Aide</button>
-    <a class="btn" href="index.html" style="text-decoration:none">🏠 Menu</a>
+    <button class="btn" id="btn-reset">⟲ Réinitialiser</button>
     <button class="btn danger" id="btn-quit">✕ Quitter</button>
   </div>
 
@@ -401,10 +409,6 @@
         </div>
       </div>
 
-      <div>
-        <div class="side-section-title">Historique des coups</div>
-        <div id="history-list"></div>
-      </div>
     </div>
 
     <div id="grid-area">
@@ -506,8 +510,28 @@
       <li><strong>En ligne :</strong> l'un crée la partie et envoie le code à 5 caractères (ou le lien) ; l'autre le saisit. Chaque coup est recalculé à l'identique des deux côtés, et l'hôte renvoie un état complet après chaque coup.</li>
       <li><strong>Mode local :</strong> les deux joueurs partagent le même écran, sans aucune connexion.</li>
     </ol>
+    <p style="font-size:.85rem;line-height:1.6;color:#1e293b;margin-top:2px;"><strong>Boutons communs du bandeau :</strong>
+      <b>📜 Historique</b> ouvre le relevé de la partie, que l'on peut imprimer ; il est aussi accessible depuis la fenêtre
+      de fin de manche. <b>🔊 Son</b> coupe ou rétablit les effets sonores, et le choix est mémorisé.
+      <b>⟲ Réinitialiser</b> arrête la partie en cours sans quitter la page. <b>✕ Quitter</b> revient au menu.</p>
     <div class="note">🌐 Pour utiliser le mode en ligne, le fichier doit être servi en <strong>HTTPS</strong> (GitHub Pages, Netlify, Vercel…) — WebRTC est bloqué sur un simple fichier local <em>file://</em> dans certains navigateurs.</div>
     <button class="btn primary" id="btn-aide-ok" style="align-self:center;">OK</button>
+  </div>
+</div>
+
+<!-- MODALE HISTORIQUE -->
+<div class="modal" id="hist-modal">
+  <div class="modal-card">
+    <div class="modal-head">
+      <h2>📜 Historique — Historique des coups</h2>
+      <button class="modal-close" id="hist-close">✕</button>
+    </div>
+    <div id="history-list"></div>
+    <div id="hist-empty">Aucun coup enregistré pour l'instant.</div>
+    <div class="overlay-buttons">
+      <button class="btn btn-net" id="hist-print">🖨 Imprimer</button>
+      <button class="btn primary" id="hist-ok">Fermer</button>
+    </div>
   </div>
 </div>
 
@@ -519,6 +543,7 @@
     <span id="ov-wait">⏳ En attente de l'hôte pour la manche suivante…</span>
     <div class="overlay-buttons">
       <button class="btn primary" id="ov-next">▶ Manche suivante</button>
+      <button class="btn" id="ov-hist">📜 Historique de la manche</button>
       <button class="btn btn-net" id="ov-ask">🙋 Demander une revanche</button>
       <button class="btn" id="ov-close">👁 Revenir à l'écran</button>
     </div>
@@ -571,6 +596,59 @@
       t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
       return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
     };
+  }
+
+
+  /* ══════════ SON (synthèse WebAudio, aucun fichier externe) ══════════ */
+  const SND = { on: true, ctx: null };
+  try { SND.on = localStorage.getItem("jeux2.sound") !== "0"; } catch (e) {}
+  function actx() {
+    if (!SND.ctx) { try { SND.ctx = new (window.AudioContext || window.webkitAudioContext)(); } catch (e) { SND.ctx = null; } }
+    return SND.ctx;
+  }
+  function tone(f, dur, type, gain, delay) {
+    const c = actx(); if (!c) return;
+    if (c.state === "suspended") { try { c.resume(); } catch (e) {} }
+    const t0 = c.currentTime + (delay || 0), d = dur || 0.12;
+    const o = c.createOscillator(), g = c.createGain();
+    o.type = type || "triangle";
+    o.frequency.setValueAtTime(f, t0);
+    g.gain.setValueAtTime(0.0001, t0);
+    g.gain.exponentialRampToValueAtTime(gain || 0.16, t0 + 0.012);
+    g.gain.exponentialRampToValueAtTime(0.0001, t0 + d);
+    o.connect(g); g.connect(c.destination);
+    o.start(t0); o.stop(t0 + d + 0.03);
+  }
+  function snd(name) {
+    if (!SND.on) return;
+    switch (name) {
+      case "click":   tone(520, .07, "square", .11); break;
+      case "drop":    tone(760, .06, "sine", .09); break;
+      case "capture": tone(660, .09, "triangle", .15); tone(880, .10, "triangle", .15, .08); tone(1180, .14, "triangle", .13, .16); break;
+      case "error":   tone(180, .16, "sawtooth", .11); break;
+      case "flap":    tone(620, .06, "square", .09); break;
+      case "pass":    tone(960, .06, "sine", .09); break;
+      case "jump":    tone(500, .08, "square", .09); break;
+      case "point":   tone(880, .10, "square", .13); tone(1240, .12, "square", .11, .09); break;
+      case "bounce":  tone(420, .05, "square", .09); break;
+      case "crash":   tone(300, .18, "sawtooth", .16); tone(140, .30, "sawtooth", .14, .10); break;
+      case "count":   tone(700, .10, "sine", .11); break;
+      case "go":      tone(1000, .18, "sine", .15); break;
+      case "win":     [523, 659, 784, 1047].forEach((f, i) => tone(f, .18, "triangle", .15, i * .11)); break;
+      case "lose":    [523, 415, 330, 262].forEach((f, i) => tone(f, .20, "triangle", .13, i * .12)); break;
+      case "join":    tone(660, .10, "sine", .13); tone(990, .12, "sine", .11, .10); break;
+    }
+  }
+  function toggleSound() {
+    SND.on = !SND.on;
+    try { localStorage.setItem("jeux2.sound", SND.on ? "1" : "0"); } catch (e) {}
+    renderSound();
+    if (SND.on) snd("click");
+  }
+  function renderSound() {
+    const b = $("btn-sound"); if (!b) return;
+    b.textContent = SND.on ? "🔊 Son" : "🔇 Muet";
+    b.classList.toggle("danger", !SND.on);
   }
 
   /* ── État partagé ── */
@@ -634,6 +712,33 @@
   }
   function clearHist() { const l = $("history-list"); if (l) l.innerHTML = ""; }
 
+  function openHist() {
+    const list = $("history-list");
+    $("hist-empty").style.display = list.children.length ? "none" : "block";
+    $("hist-modal").classList.add("show");
+  }
+  function closeHist() { $("hist-modal").classList.remove("show"); }
+  function printHistory() {
+    const rows = Array.from(document.querySelectorAll("#history-list .hist-item")).map((el) => {
+      const c = el.children;
+      return "<tr>" + Array.from(c).map((s) => "<td>" + escapeHtml(s.textContent) + "</td>").join("") + "</tr>";
+    }).join("");
+    const titre = document.title.split("—")[0].trim();
+    const w = window.open("", "_blank", "width=720,height=820");
+    if (!w) { msg("Le navigateur a bloqué la fenêtre d'impression."); return; }
+    w.document.write('<!DOCTYPE html><html lang="fr"><head><meta charset="utf-8"><title>Historique — ' + titre +
+      '</title><style>body{font-family:Segoe UI,Arial,sans-serif;color:#06283d;padding:26px}' +
+      'h1{font-size:1.25rem;margin:0 0 4px}p{font-size:.85rem;color:#0a5b80;margin:0 0 14px}' +
+      'table{border-collapse:collapse;width:100%;font-size:.85rem}' +
+      'td,th{border:1px solid #7dd3f0;padding:5px 9px;text-align:left}th{background:#e0f6ff}</style></head><body>' +
+      "<h1>" + titre + " — historique de la partie</h1><p>" +
+      escapeHtml(S.names[0]) + " contre " + escapeHtml(S.names[1]) + " — " + new Date().toLocaleString("fr-FR") +
+      "</p><table>" + (rows || "<tr><td>Aucun coup enregistré.</td></tr>") + "</table></body></html>");
+    w.document.close(); w.focus();
+    setTimeout(() => { try { w.print(); } catch (e) {} }, 350);
+  }
+
+
   /* ── Envoi réseau ── */
   function send(obj) { try { if (NET.conn && NET.conn.open) NET.conn.send(obj); } catch (e) { /* ignore */ } }
 
@@ -649,7 +754,8 @@
     if (d) d.textContent = S.draws;
     if (r) r.textContent = S.rounds;
     const isGuest = NET.mode === "guest";
-    $("btn-start").disabled = isGuest || (NET.mode === "host" && !NET.connected);
+    const solo = !!(GAME.solo && GAME.solo());
+    $("btn-start").disabled = !solo && (isGuest || (NET.mode === "host" && !NET.connected));
     $("chat-input").disabled = NET.mode === "local";
     $("chat-send").disabled = NET.mode === "local";
   }
@@ -680,7 +786,7 @@
     st.innerHTML = (o.stats || []).map((s) =>
       '<div class="ov-stat"><span class="ov-stat-val">' + s[0] + '</span><span class="ov-stat-lbl">' + s[1] + '</span></div>').join("");
     st.style.display = (o.stats && o.stats.length) ? "flex" : "none";
-    const guest = NET.mode === "guest";
+    const guest = NET.mode === "guest" && !(GAME.solo && GAME.solo());
     $("ov-wait").style.display = guest ? "block" : "none";
     $("ov-next").style.display = guest ? "none" : "inline-flex";
     $("ov-next").textContent = o.nextLabel || "▶ Manche suivante";
@@ -697,6 +803,7 @@
         S.names[1] = (d.name || "Joueur 2").slice(0, 14);
         NET.connected = true;
         addChat("", "🔌 <b>" + escapeHtml(S.names[1]) + "</b> a rejoint la partie.", true);
+        snd("join");
         send({ t: "welcome", names: S.names });
         renderCommon();
         if (GAME.onConnected) GAME.onConnected();
@@ -706,6 +813,7 @@
         S.names = d.names; NET.myRole = 2; NET.connected = true;
         $("inp-me").value = S.names[1];
         addChat("", "🔌 Connecté à <b>" + escapeHtml(S.names[0]) + "</b>.", true);
+        snd("join");
         renderCommon();
         if (GAME.onConnected) GAME.onConnected();
         break;
@@ -853,7 +961,14 @@
       hideOverlay();
       if (GAME.onStart) GAME.onStart();
     });
-    $("btn-quit").addEventListener("click", () => { if (GAME.onQuit) GAME.onQuit(); });
+    $("btn-reset").addEventListener("click", () => { if (GAME.onQuit) GAME.onQuit(); snd("click"); });
+    $("btn-quit").addEventListener("click", () => { cleanupPeer(); location.href = "index.html"; });
+    $("btn-sound").addEventListener("click", toggleSound);
+    $("btn-hist").addEventListener("click", openHist);
+    $("hist-close").addEventListener("click", closeHist);
+    $("hist-ok").addEventListener("click", closeHist);
+    $("hist-print").addEventListener("click", printHistory);
+    $("ov-hist").addEventListener("click", openHist);
 
     $("btn-connect").addEventListener("click", () => {
       $("net-step-choice").style.display = "block";
@@ -902,6 +1017,8 @@
     document.addEventListener("keydown", (e) => {
       if (e.key === "Escape") document.querySelectorAll(".modal.show").forEach((m) => m.classList.remove("show"));
     });
+
+    renderSound();
 
     /* Invitation reçue par lien */
     const room = new URLSearchParams(location.search).get("room");
@@ -1051,10 +1168,10 @@
     const step = () => {
       if (k < r.steps.length) {
         const i = r.steps[k++];
-        view[i]++; renderPits(view); flash(i, "drop");
+        view[i]++; renderPits(view); flash(i, "drop"); snd("drop");
         setTimeout(step, 80);
       } else if (r.caps.length) {
-        r.caps.forEach((i, n) => setTimeout(() => { flash(i, "cap"); view[i] = 0; renderPits(view); }, n * 150));
+        r.caps.forEach((i, n) => setTimeout(() => { flash(i, "cap"); view[i] = 0; renderPits(view); snd("capture"); }, n * 150));
         const st = $(r.player === 1 ? "store-1" : "store-2");
         setTimeout(() => { if (st) { st.classList.add("gain"); setTimeout(() => st.classList.remove("gain"), 500); } }, 120);
         setTimeout(done, r.caps.length * 150 + 200);
@@ -1072,6 +1189,7 @@
     if (!inOwn(idx, p)) { msg("Vous ne semez que depuis vos six cases."); return; }
     const allowed = feedingMoves(A.board, p);
     if (allowed.indexOf(idx) < 0) {
+      snd("error");
       msg(A.board[idx] === 0 ? "Cette case est vide." :
           "Coup interdit : il affamerait l'adversaire alors qu'un autre coup nourrit.");
       return;
@@ -1135,6 +1253,7 @@
     const w = A.store[0] > A.store[1] ? 1 : (A.store[1] > A.store[0] ? 2 : 0);
     if (w === 0) S.draws++; else S.scores[w - 1]++;
     render(); renderPlayers();
+    snd(w === 0 ? "count" : (NET.mode === "local" || w === NET.myRole ? "win" : "lose"));
     addChat("", "🏁 " + escapeHtml(reason) + ".", true);
     showOverlay({
       title: w === 0 ? "🤝 Match nul" : "🎉 " + S.names[w - 1] + " l'emporte !",
@@ -1146,6 +1265,7 @@
 
   /* ── Manches ── */
   function newRound() {
+    snd("click");
     A.board = new Array(12).fill(4);
     A.store = [0, 0];
     A.starter = (S.rounds % 2 === 0) ? 1 : 2;     // l'hôte ouvre la 1re manche, puis on alterne

@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Pong Néon — duel en ligne (P2P)</title>
+<title>Comète — duel en ligne ou solo (P2P)</title>
 
 <style>
 
@@ -329,14 +329,40 @@
 
   <!-- CONFIG -->
   <div id="configpanel">
-    <span class="game-title">🏓 Pong Néon</span>
+    <span class="game-title">🚀 Comète</span>
+    <div class="separator"></div>
+    <div class="cfg-group">
+      <span class="cfg-label">Joueurs</span>
+      <select id="sel-mode">
+        <option value="2" selected>2 joueurs — duel</option>
+        <option value="1">1 joueur — solo</option>
+      </select>
+    </div>
+    <div class="cfg-group">
+      <span class="cfg-label">Vitesse</span>
+      <select id="sel-speed">
+        <option value="0.7">Lente</option>
+        <option value="1" selected>Normale</option>
+        <option value="1.35">Rapide</option>
+        <option value="1.7">Très rapide</option>
+      </select>
+    </div>
+    <div class="cfg-group">
+      <span class="cfg-label">Touche d'impulsion</span>
+      <select id="sel-key">
+        <option value="Space" selected>Espace</option>
+        <option value="ArrowUp">Flèche ↑</option>
+        <option value="KeyW">W / Z</option>
+        <option value="Enter">Entrée</option>
+      </select>
+    </div>
     <div class="separator"></div>
     <div class="cfg-group">
       <span class="cfg-label">Mon pseudo</span>
       <input type="text" id="inp-me" maxlength="14" value="Joueur 1">
     </div>
     <div class="separator"></div>
-    <button class="btn primary" id="btn-start">▶ Lancer la partie</button>
+    <button class="btn primary" id="btn-start">▶ Lancer la manche</button>
     <button class="btn btn-net" id="btn-connect">🌐 Connexion</button>
     <button class="btn" id="btn-hist">📜 Historique</button>
     <button class="btn" id="btn-sound">🔊 Son</button>
@@ -361,9 +387,9 @@
   <div id="statsbar">
     <div class="stat-block"><span class="stat-label">Temps</span><span class="stat-value" id="st-time">—</span></div>
     <div class="stat-block"><span class="stat-label">Score</span><span class="stat-value c-yellow" id="st-live">—</span></div>
-    <div class="stat-block"><span class="stat-label">Votre rôle</span><span class="stat-value" id="st-role">—</span></div>
-    <div class="stat-block"><span class="stat-label">Parties gagnées</span><span class="stat-value c-green" id="st-score">—</span></div>
-    <div class="stat-block"><span class="stat-label">Objectif</span><span class="stat-value c-purple" id="st-target">—</span></div>
+    <div class="stat-block"><span class="stat-label">Palier de vitesse</span><span class="stat-value c-purple" id="st-palier">—</span></div>
+    <div class="stat-block"><span class="stat-label">Manches gagnées</span><span class="stat-value c-green" id="st-score">—</span></div>
+    <div class="stat-block"><span class="stat-label">Adversaire</span><span class="stat-value" id="st-opp">—</span></div>
   </div>
 
   <!-- MAIN -->
@@ -373,7 +399,7 @@
       <div>
         <div class="side-section-title">Joueurs</div>
         <div class="player-card p1" id="pc-1">
-          <span class="pc-mark" id="pc-mark-1">🟦</span>
+          <span class="pc-mark" id="pc-mark-1">🔵</span>
           <span class="pc-body">
             <span class="pc-name" id="pc-name-1">Joueur 1</span>
             <span class="pc-sub"  id="pc-sub-1">Hôte</span>
@@ -381,7 +407,7 @@
           <span class="pc-score" id="pc-score-1">0</span>
         </div>
         <div class="player-card p2" id="pc-2">
-          <span class="pc-mark" id="pc-mark-2">🟥</span>
+          <span class="pc-mark" id="pc-mark-2">🔴</span>
           <span class="pc-body">
             <span class="pc-name" id="pc-name-2">Joueur 2</span>
             <span class="pc-sub"  id="pc-sub-2">Invité</span>
@@ -390,7 +416,7 @@
         </div>
         <div class="side-counter"><span class="sc-label">Matchs nuls</span><span class="sc-val" id="sc-draws">0</span></div>
         <div class="side-counter"><span class="sc-label">Manches jouées</span><span class="sc-val" id="sc-rounds">0</span></div>
-        <div class="side-note">La raquette suit la <b>souris</b> ou le <b>doigt</b>. Au clavier : <b>↑</b> / <b>↓</b>. En local, joueur 1 avec <b>W</b> / <b>S</b> et joueur 2 avec <b>↑</b> / <b>↓</b>.</div>
+        <div class="side-note">Commande unique : <b>clic</b>, <b>tap</b> ou la touche choisie dans le bandeau donne une impulsion vers le haut. Sans impulsion, la comète tombe. Le mode <b>solo</b> se joue sans adversaire.</div>
       </div>
 
       <div>
@@ -440,15 +466,15 @@
       <div class="choice-grid">
         <button class="choice" id="ch-host">
           <span class="ch-ico">🎬</span>
-          <span><span class="ch-tit">Créer une partie</span><br><span class="ch-sub">Vous obtenez un code à partager. Vous êtes la raquette GAUCHE et arbitrez la balle.</span></span>
+          <span><span class="ch-tit">Créer une partie</span><br><span class="ch-sub">Vous obtenez un code à partager. Vous générez la graine du parcours.</span></span>
         </button>
         <button class="choice" id="ch-join">
           <span class="ch-ico">🔑</span>
-          <span><span class="ch-tit">Rejoindre une partie</span><br><span class="ch-sub">Saisissez le code reçu. Vous êtes la raquette DROITE.</span></span>
+          <span><span class="ch-tit">Rejoindre une partie</span><br><span class="ch-sub">Saisissez le code reçu. Vous volez sur le même parcours que l'hôte.</span></span>
         </button>
         <button class="choice" id="ch-local">
           <span class="ch-ico">🪑</span>
-          <span><span class="ch-tit">Jouer en local</span><br><span class="ch-sub">Les deux raquettes sur le même écran : W / S à gauche, ↑ / ↓ à droite.</span></span>
+          <span><span class="ch-tit">Jouer en local</span><br><span class="ch-sub">Les deux joueurs jouent chacun leur tour sur cet écran, avec la même graine.</span></span>
         </button>
       </div>
       <p style="margin-top:12px;">La connexion est <strong>directe entre les deux navigateurs</strong> (WebRTC / PeerJS) : aucune donnée de partie ne transite par un serveur, seul l'annuaire public PeerJS sert à la mise en relation.</p>
@@ -485,17 +511,19 @@
 <div class="modal" id="aide-modal">
   <div class="modal-card">
     <div class="modal-head">
-      <h2>🎮 Comment jouer — Pong Néon</h2>
+      <h2>🎮 Comment jouer — Comète</h2>
       <button class="modal-close" id="btn-aide-close">✕</button>
     </div>
     <ol class="help">
-      <li><strong>But :</strong> renvoyer la balle avec sa raquette. Le premier à <strong>10 points</strong> gagne la partie.</li>
-      <li><strong>Commandes :</strong> la raquette suit la <strong>souris</strong> ou le <strong>doigt</strong> ; les flèches <strong>↑</strong> et <strong>↓</strong> fonctionnent aussi.</li>
-      <li>L'<strong>hôte</strong> est la raquette gauche, l'<strong>invité</strong> la raquette droite. La balle rebondit en haut et en bas ; l'angle de renvoi dépend du point d'impact sur la raquette — un bord donne un angle raide.</li>
-      <li>La balle accélère légèrement à chaque échange. Une balle qui dépasse un bord latéral donne un point à l'adversaire, et le service repart du centre vers celui qui vient d'encaisser.</li>
-      <li><strong>Sous le capot :</strong> l'hôte est le seul arbitre — il simule la balle et diffuse sa position environ 30 fois par seconde. L'invité envoie uniquement la hauteur de sa raquette et affiche la balle reçue, lissée pour absorber la latence : aucune divergence n'est possible.</li>
-      <li><strong>Inactivité :</strong> au bout de dix secondes sans nouvelle de l'adversaire, un message d'attente s'affiche. <strong>Déconnexion :</strong> la partie s'arrête et le score est conservé.</li>
-      <li><strong>Mode local :</strong> les deux raquettes sur le même écran, W / S à gauche et ↑ / ↓ à droite.</li>
+      <li><strong>But :</strong> franchir le plus de barrières possible. Un seul bouton : <strong>clic</strong>, <strong>tap</strong> ou la touche choisie dans le bandeau donne une impulsion vers le haut ; sinon la comète tombe.</li>
+      <li><strong>Réglages :</strong> le bandeau permet de choisir le nombre de joueurs (<strong>duel</strong> ou <strong>solo</strong>), la <strong>vitesse</strong> de défilement (lente à très rapide) et la <strong>touche d'impulsion</strong> (Espace, ↑, W/Z ou Entrée). En duel, la vitesse choisie par l'hôte s'applique aux deux joueurs, pour que le défi soit identique.</li>
+      <li><strong>Mode solo :</strong> aucun adversaire, aucune connexion. Le meilleur score est conservé sur cet appareil et affiché à la fin de chaque vol.</li>
+      <li>Toucher une barrière ou le sol met fin au vol : le score est figé et envoyé à l'adversaire.</li>
+      <li><strong>Score :</strong> +1 par barrière franchie. La vitesse de défilement augmente par paliers, à 10, 25, 50 et 100 points.</li>
+      <li><strong>Duel :</strong> les deux joueurs volent <em>en même temps</em>, chacun sur son écran, sur le <strong>même parcours</strong>. Le meilleur score remporte la manche ; le duel se joue au meilleur des trois.</li>
+      <li><strong>Égalité :</strong> la manche est rejouée. <strong>Déconnexion en vol :</strong> victoire par forfait pour l'autre joueur ; l'attente d'un score est limitée à deux minutes.</li>
+      <li><strong>Sous le capot :</strong> l'hôte tire une graine et l'envoie à l'invité. Le parcours est produit par un générateur déterministe (mulberry32) et la simulation tourne à pas fixe (60 pas par seconde de temps écoulé), en unités relatives : un téléphone et un PC obtiennent exactement le même parcours.</li>
+      <li><strong>Mode local :</strong> le joueur 1 vole, puis le joueur 2 rejoue le même parcours ; les scores sont comparés.</li>
     </ol>
     <p style="font-size:.85rem;line-height:1.6;color:#1e293b;margin-top:2px;"><strong>Boutons communs du bandeau :</strong>
       <b>📜 Historique</b> ouvre le relevé de la partie, que l'on peut imprimer ; il est aussi accessible depuis la fenêtre
@@ -510,7 +538,7 @@
 <div class="modal" id="hist-modal">
   <div class="modal-card">
     <div class="modal-head">
-      <h2>📜 Historique — Points marqués</h2>
+      <h2>📜 Historique — Scores des manches</h2>
       <button class="modal-close" id="hist-close">✕</button>
     </div>
     <div id="history-list"></div>
@@ -1021,313 +1049,352 @@
 
 
   /* ══════════════════════════════════════════════════════════════════════
-     MODULE DE JEU — PONG NÉON
-     Une seule autorité : l'HÔTE simule la balle et diffuse sa position.
-     L'invité n'envoie que la hauteur de sa raquette et affiche la balle
-     reçue (interpolée) : aucune divergence possible.
+     MODULE DE JEU — FLAPPY COMÈTE
+     Contrat critique : même graine ⇒ même parcours. La simulation tourne
+     à PAS FIXE (60 pas/seconde de temps écoulé) et toutes les positions
+     sont en unités relatives (1 = hauteur du terrain) : un téléphone et
+     un PC produisent rigoureusement le même parcours.
      ══════════════════════════════════════════════════════════════════════ */
-  GAME.prefix = "pongneon-p2p-";
+  GAME.prefix = "flappy-p2p-";
 
   const DT = 1 / 60;
-  const PADW = 0.018, PADH = 0.20, PADX = 0.035, BR = 0.016;
-  const V0 = 0.78, VMAX = 2.0, ACC = 1.045, TARGET = 10;
+  const GRAV = 2.15, FLAP = -0.70, RAD = 0.030;
+  const PIPE_W = 0.10, GAP = 0.27, SPACING = 0.62, FIRST_X = 1.30, COMET_X = 0.45;
+  const MAXW = 3;                                  // manches à gagner : 2 sur 3
 
   const cv = $("stage"), ctx = cv.getContext("2d");
   const hud = $("hud"), hudBig = $("hud-big"), hudSub = $("hud-sub");
 
-  const P = {
-    state: "idle",              // idle | count | play | done
-    bx: 0.9, by: 0.5, vx: V0, vy: 0.2,
-    yL: 0.5, yR: 0.5,           // hauteurs de raquette (centre), en unités
-    shownL: 0.5, shownR: 0.5,   // versions lissées pour l'affichage
-    tbx: 0.9, tby: 0.5,         // cible d'interpolation (invité)
-    sl: 0, sr: 0,
-    acc: 0, last: 0, tick: 0, countEnd: 0,
-    flash: 0, trail: [], stars: [],
-    lastPos: 0, lastSend: 0, warned: false, lastCount: 0,
-    keys: {}
+  const F = {
+    seed: 0, rng: null, gaps: [], stars: [], mul: 1, lastCount: 0,
+    state: "idle",            // idle | count | fly | dead | done
+    camX: 0, y: 0.5, vy: 0, score: 0, passed: 0,
+    trail: [], acc: 0, last: 0, countEnd: 0,
+    myScore: null, oppScore: null, localTurn: 0, localScores: [0, 0],
+    waitTimer: null
   };
 
+  /* ── Réglages du bandeau ── */
+  function isSolo() { return $("sel-mode").value === "1"; }
+  GAME.solo = isSolo;
+  function speedMul() { return parseFloat($("sel-speed").value) || 1; }
+  function keyMatches(e) {
+    const k = $("sel-key").value;
+    if (k === "Space")   return e.code === "Space" || e.key === " ";
+    if (k === "ArrowUp") return e.code === "ArrowUp";
+    if (k === "KeyW")    return e.code === "KeyW" || e.code === "KeyZ";
+    if (k === "Enter")   return e.code === "Enter" || e.code === "NumpadEnter";
+    return false;
+  }
+  function bestScore() { try { return parseInt(localStorage.getItem("comete.best") || "0", 10) || 0; } catch (e) { return 0; } }
+  function setBest(v) { try { localStorage.setItem("comete.best", String(v)); } catch (e) {} }
+
+  /* ── Terrain ── */
   function worldW() { return cv.width / cv.height; }
-  function myY() { return NET.mode === "guest" ? P.yR : P.yL; }
+  function gapAt(n) {
+    while (F.gaps.length <= n) F.gaps.push(0.17 + F.rng() * 0.60);
+    return F.gaps[n];
+  }
+  function pipeX(n) { return FIRST_X + n * SPACING; }
+  function speedFor(s) { let v = 0.42 * F.mul; if (s >= 10) v = 0.50 * F.mul; if (s >= 25) v = 0.58 * F.mul; if (s >= 50) v = 0.68 * F.mul; if (s >= 100) v = 0.80 * F.mul; return v; }
+  function palierFor(s) { return s >= 100 ? "V" : s >= 50 ? "IV" : s >= 25 ? "III" : s >= 10 ? "II" : "I"; }
 
-  function initStars() {
-    const sr = mulberry32(20260909);
-    P.stars = [];
-    for (let i = 0; i < 120; i++) P.stars.push({ x: sr() * 2, y: sr(), r: 0.4 + sr() * 1.6, a: 0.18 + sr() * 0.55 });
+  function setSeed(seed) {
+    F.seed = seed >>> 0;
+    F.rng = mulberry32(F.seed);
+    F.gaps = [];
+    const sr = mulberry32(F.seed ^ 0x9e3779b9);
+    F.stars = [];
+    for (let i = 0; i < 90; i++) F.stars.push({ x: sr() * 6, y: sr(), r: 0.4 + sr() * 1.6, a: 0.25 + sr() * 0.6 });
   }
 
-  /* ── Service ── */
-  function serve(towards) {
-    const ww = worldW();
-    P.bx = ww / 2; P.by = 0.5;
-    const ang = (Math.random() - 0.5) * 0.7;
-    P.vx = (towards === 1 ? -1 : 1) * V0 * Math.cos(ang);
-    P.vy = V0 * Math.sin(ang);
-    P.trail = [];
+  /* ── Cycle d'une course ── */
+  function beginRun() {
+    F.camX = 0; F.y = 0.5; F.vy = 0; F.score = 0; F.passed = 0;
+    F.trail = []; F.acc = 0; F.last = 0;
+    F.state = "count"; F.countEnd = Date.now() + 3200;
+    resetTimer(); startTimer();
+    render();
+  }
+  function flap() {
+    if (F.state === "fly") { F.vy = FLAP; snd("flap"); }
+    else if (F.state === "idle" && NET.mode === "local" && F.localTurn > 0) beginRun();
   }
 
-  /* ── Simulation (hôte ou local uniquement) ── */
   function step() {
-    const ww = worldW();
-    P.bx += P.vx * DT; P.by += P.vy * DT;
+    F.vy += GRAV * DT;
+    F.y += F.vy * DT;
+    F.camX += speedFor(F.score) * DT;
+    if (F.y - RAD < 0) { F.y = RAD; F.vy = 0; }
 
-    if (P.by < BR) { P.by = BR; P.vy = Math.abs(P.vy); }
-    if (P.by > 1 - BR) { P.by = 1 - BR; P.vy = -Math.abs(P.vy); }
+    const cx = F.camX + COMET_X;
+    /* barrière franchie */
+    while (cx > pipeX(F.passed) + PIPE_W) { F.passed++; F.score++; snd("pass"); }
 
-    /* raquette gauche */
-    if (P.vx < 0 && P.bx - BR < PADX + PADW && P.bx - BR > PADX - 0.05) {
-      if (Math.abs(P.by - P.yL) < PADH / 2 + BR) bounce(1);
+    /* collision */
+    for (let n = Math.max(0, F.passed - 1); n < F.passed + 4; n++) {
+      const px = pipeX(n);
+      if (cx + RAD > px && cx - RAD < px + PIPE_W) {
+        const g = gapAt(n);
+        if (F.y - RAD < g - GAP / 2 || F.y + RAD > g + GAP / 2) return die();
+      }
     }
-    /* raquette droite */
-    if (P.vx > 0 && P.bx + BR > ww - PADX - PADW && P.bx + BR < ww - PADX + 0.05) {
-      if (Math.abs(P.by - P.yR) < PADH / 2 + BR) bounce(2);
-    }
+    if (F.y + RAD > 1) return die();
 
-    if (P.bx < -0.05) { point(2); return; }
-    if (P.bx > ww + 0.05) { point(1); return; }
-
-    P.trail.push({ x: P.bx, y: P.by });
-    if (P.trail.length > 16) P.trail.shift();
+    F.trail.push({ x: COMET_X, y: F.y });
+    if (F.trail.length > 22) F.trail.shift();
   }
 
-  function bounce(side) {
-    const ww = worldW();
-    const py = side === 1 ? P.yL : P.yR;
-    const rel = clamp((P.by - py) / (PADH / 2), -1, 1);
-    const sp = Math.min(Math.hypot(P.vx, P.vy) * ACC, VMAX);
-    const ang = rel * 0.95;                       // bord de raquette = angle raide
-    P.vx = (side === 1 ? 1 : -1) * sp * Math.cos(ang);
-    P.vy = sp * Math.sin(ang);
-    P.bx = side === 1 ? PADX + PADW + BR + 0.001 : ww - PADX - PADW - BR - 0.001;
-    snd("bounce");
-  }
-
-  function point(who) {
-    if (who === 1) P.sl++; else P.sr++;
-    P.flash = 1;
-    snd("point");
-    addHist(P.sl + P.sr, (who === 1 ? "🔵 " : "🔴 ") + S.names[who - 1], P.sl + " — " + P.sr);
-    if (P.sl >= TARGET || P.sr >= TARGET) return finish();
-    serve(who === 1 ? 2 : 1);                     // la balle repart vers celui qui encaisse
-    broadcast(true);
-  }
-
-  function finish() {
-    P.state = "done";
+  function die() {
+    F.state = "dead";
     stopTimer();
-    const w = P.sl > P.sr ? 1 : 2;
-    S.rounds++; S.scores[w - 1]++;
+    snd("crash");
+    if (isSolo()) {
+      const b = bestScore();
+      if (F.score > b) setBest(F.score);
+      addHist(S.rounds + 1, "🚀 Solo", F.score);
+      S.rounds++; renderPlayers();
+      F.state = "done";
+      showOverlay({
+        title: F.score > b ? "🏅 Nouveau record : " + F.score : "💥 Score : " + F.score,
+        stats: [[F.score, "Barrières"], [Math.max(b, F.score), "Record"], [palierFor(F.score), "Palier atteint"]],
+        nextLabel: "▶ Rejouer"
+      });
+      snd(F.score > b ? "win" : "lose");
+      hudShow("💥 " + F.score, "Cliquez sur <b>▶ Rejouer</b> pour repartir.");
+      render();
+      return;
+    }
+    if (NET.mode === "local") {
+      F.localScores[F.localTurn - 1] = F.score;
+      addHist(S.rounds + 1, (F.localTurn === 1 ? "🔵 " : "🔴 ") + S.names[F.localTurn - 1], F.score);
+      if (F.localTurn === 1) {
+        F.localTurn = 2; F.state = "idle";
+        hudShow("À " + S.names[1], "Même parcours, même graine. Cliquez, touchez l'écran ou appuyez sur Espace pour décoller.");
+      } else {
+        resolve(F.localScores[0], F.localScores[1]);
+      }
+    } else {
+      F.myScore = F.score;
+      send({ t: "fscore", value: F.score });
+      addHist(S.rounds + 1, "🚀 " + S.names[NET.myRole - 1], F.score);
+      if (F.oppScore != null) resolveNet();
+      else {
+        hudShow("💥 " + F.score, "Score envoyé. En attente du score de l'adversaire…");
+        clearTimeout(F.waitTimer);
+        F.waitTimer = setTimeout(() => {
+          if (F.state === "dead" && F.oppScore == null) { forfeit(NET.myRole); }
+        }, 120000);
+      }
+    }
+    render();
+  }
+
+  function resolveNet() {
+    clearTimeout(F.waitTimer);
+    const a = NET.myRole === 1 ? F.myScore : F.oppScore;
+    const b = NET.myRole === 1 ? F.oppScore : F.myScore;
+    resolve(a, b);
+  }
+
+  function resolve(s1, s2) {
+    F.state = "done";
+    S.rounds++;
+    let title, cls = "";
+    if (s1 === s2) {
+      S.draws++;
+      title = "🤝 Égalité — manche à rejouer";
+      cls = "draw";
+    } else {
+      const w = s1 > s2 ? 1 : 2;
+      S.scores[w - 1]++;
+      title = "🎉 " + S.names[w - 1] + " remporte la manche";
+    }
+    const fin = S.scores[0] >= 2 || S.scores[1] >= 2;
+    const mine = NET.mode === "local" ? true : ((s1 > s2 ? 1 : 2) === NET.myRole);
+    snd(s1 === s2 ? "count" : (mine ? "win" : "lose"));
     renderPlayers(); render();
-    snd(NET.mode === "local" || w === NET.myRole ? "win" : "lose");
     showOverlay({
-      title: "🎉 " + S.names[w - 1] + " gagne la partie !",
-      stats: [[P.sl + " — " + P.sr, "Score"], [fmtTime(S.elapsed), "Temps"], [S.scores[0] + " — " + S.scores[1], "Parties"]],
-      nextLabel: "▶ Revanche"
+      title: fin ? "🏆 " + S.names[S.scores[0] >= 2 ? 0 : 1] + " gagne le duel !" : title,
+      cls: cls,
+      stats: [[s1, S.names[0]], [s2, S.names[1]], [S.scores[0] + " — " + S.scores[1], "Manches"]],
+      nextLabel: fin ? "▶ Nouveau duel" : "▶ Manche suivante"
     });
-    hudShow("🏁", S.names[w - 1] + " l'emporte " + P.sl + " — " + P.sr + ".");
-    if (NET.mode === "host" && NET.connected) send({ t: "pend", sl: P.sl, sr: P.sr });
+    if (fin) { S.scores = [0, 0]; S.draws = 0; }
+    hudShow(fin ? "🏆" : "🏁", "Manche terminée.");
   }
 
-  function broadcast(force) {
-    if (NET.mode !== "host" || !NET.connected) return;
-    send({ t: "ball", x: P.bx, y: P.by, l: P.yL, sl: P.sl, sr: P.sr, s: P.state });
+  function forfeit(winner) {
+    F.state = "done";
+    S.rounds++; S.scores[winner - 1]++;
+    renderPlayers();
+    showOverlay({ title: "🏳️ Victoire par forfait", stats: [[S.scores[0] + " — " + S.scores[1], "Manches"]] });
+    hudShow("🏳️", "Adversaire absent : manche gagnée par forfait.");
   }
 
-  /* ── Boucle ── */
+  /* ── Boucle principale (pas fixe) ── */
   function frame(ts) {
     requestAnimationFrame(frame);
-
-    if (P.state === "count") {
-      const left = P.countEnd - Date.now();
-      if (left <= 0) { P.state = "play"; P.last = ts; P.acc = 0; hudHide(); startTimer(); snd("go"); P.lastCount = 0; }
+    if (F.state === "count") {
+      const left = F.countEnd - Date.now();
+      if (left <= 0) { F.state = "fly"; F.last = ts; F.acc = 0; hudHide(); snd("go"); F.lastCount = 0; }
       else {
         const n = left > 2200 ? 3 : left > 1200 ? 2 : 1;
-        if (P.lastCount !== n) { P.lastCount = n; snd("count"); }
+        if (F.lastCount !== n) { F.lastCount = n; snd("count"); }
         hudShow(String(n), "Préparez-vous…");
       }
-    } else if (P.state === "play") {
-      if (!P.last) P.last = ts;
-      let dt = (ts - P.last) / 1000; P.last = ts;
-      if (dt > 0.25) dt = 0.25;
-      P.acc += dt;
+    } else if (F.state === "fly") {
+      if (!F.last) F.last = ts;
+      let dt = (ts - F.last) / 1000; F.last = ts;
+      if (dt > 0.25) dt = 0.25;                    // reprise d'onglet : on ne rattrape pas tout
+      F.acc += dt;
       let guard = 0;
-      const simulateHere = (NET.mode === "host" || NET.mode === "local");
-      while (P.acc >= DT && guard++ < 20) {
-        if (simulateHere) step();
-        P.acc -= DT;
-        P.tick++;
-        if (simulateHere && NET.mode === "host" && (P.tick % 2 === 0)) broadcast();
-      }
-      if (NET.mode === "guest") {
-        /* la balle reçue est lissée pour absorber la latence */
-        P.bx += (P.tbx - P.bx) * 0.35;
-        P.by += (P.tby - P.by) * 0.35;
-        P.trail.push({ x: P.bx, y: P.by });
-        if (P.trail.length > 16) P.trail.shift();
-        const now = Date.now();
-        if (now - P.lastSend > 33) { P.lastSend = now; send({ t: "pos", y: P.yR }); }
-      }
-      if (NET.mode === "host" && NET.connected && Date.now() - P.lastPos > 10000 && !P.warned) {
-        P.warned = true; msg("Adversaire inactif depuis 10 secondes — en attente…", true);
-      }
-    }
-
-    /* lissage de l'affichage des raquettes */
-    P.shownL += (P.yL - P.shownL) * 0.4;
-    P.shownR += (P.yR - P.shownR) * 0.4;
-    if (P.flash > 0) P.flash = Math.max(0, P.flash - 0.03);
-
-    /* clavier (mode local ou secours) */
-    const spd = 0.9 / 60;
-    if (NET.mode === "local") {
-      if (P.keys.w) P.yL = clamp(P.yL - spd, PADH / 2, 1 - PADH / 2);
-      if (P.keys.s) P.yL = clamp(P.yL + spd, PADH / 2, 1 - PADH / 2);
-      if (P.keys.up) P.yR = clamp(P.yR - spd, PADH / 2, 1 - PADH / 2);
-      if (P.keys.down) P.yR = clamp(P.yR + spd, PADH / 2, 1 - PADH / 2);
-    } else {
-      const set = (v) => { if (NET.mode === "guest") P.yR = v; else P.yL = v; };
-      if (P.keys.up || P.keys.w) set(clamp(myY() - spd, PADH / 2, 1 - PADH / 2));
-      if (P.keys.down || P.keys.s) set(clamp(myY() + spd, PADH / 2, 1 - PADH / 2));
+      while (F.acc >= DT && F.state === "fly" && guard++ < 20) { step(); F.acc -= DT; }
     }
     draw();
   }
 
   /* ── Dessin ── */
   function draw() {
-    const w = cv.width, h = cv.height, ww = worldW();
-    ctx.fillStyle = "#050716"; ctx.fillRect(0, 0, w, h);
-    ctx.fillStyle = "#fff";
-    P.stars.forEach((s) => { ctx.globalAlpha = s.a; ctx.fillRect(s.x * h, s.y * h, s.r, s.r); });
-    ctx.globalAlpha = 1;
+    const w = cv.width, h = cv.height;
+    ctx.clearRect(0, 0, w, h);
+    const g = ctx.createLinearGradient(0, 0, 0, h);
+    g.addColorStop(0, "#04121f"); g.addColorStop(1, "#0a2a44");
+    ctx.fillStyle = g; ctx.fillRect(0, 0, w, h);
 
-    if (P.flash > 0) { ctx.fillStyle = "rgba(125,227,255," + (P.flash * 0.25).toFixed(3) + ")"; ctx.fillRect(0, 0, w, h); }
-
-    /* ligne médiane */
-    ctx.strokeStyle = "#38b6ff55"; ctx.lineWidth = 3; ctx.setLineDash([12, 16]);
-    ctx.beginPath(); ctx.moveTo(w / 2, 0); ctx.lineTo(w / 2, h); ctx.stroke();
-    ctx.setLineDash([]);
-
-    /* scores */
-    ctx.font = "900 " + Math.round(h * 0.2) + "px 'Courier New', monospace";
-    ctx.textAlign = "center"; ctx.fillStyle = "#ffffff1f";
-    ctx.fillText(P.sl, w * 0.32, h * 0.28);
-    ctx.fillText(P.sr, w * 0.68, h * 0.28);
-
-    /* raquettes */
-    const pad = (x, yc, color) => {
-      ctx.shadowColor = color; ctx.shadowBlur = 22; ctx.fillStyle = color;
-      ctx.beginPath();
-      const px = x * h, py = (yc - PADH / 2) * h, pw = PADW * h, ph = PADH * h;
-      if (ctx.roundRect) ctx.roundRect(px, py, pw, ph, pw / 2); else ctx.rect(px, py, pw, ph);
-      ctx.fill(); ctx.shadowBlur = 0;
-    };
-    pad(PADX, P.shownL, "#7de3ff");
-    pad(ww - PADX - PADW, P.shownR, "#ff7de3");
-
-    /* traînée + balle */
-    P.trail.forEach((p, i) => {
-      const a = (i + 1) / P.trail.length;
-      ctx.globalAlpha = a * 0.5; ctx.fillStyle = "#fff2a8";
-      ctx.beginPath(); ctx.arc(p.x * h, p.y * h, BR * h * a, 0, 7); ctx.fill();
+    /* étoiles (parallaxe) */
+    const ww = worldW();
+    ctx.fillStyle = "#ffffff";
+    F.stars.forEach((s) => {
+      let x = (s.x - F.camX * 0.35) % (ww + 1); if (x < -0.2) x += ww + 1;
+      ctx.globalAlpha = s.a;
+      ctx.fillRect(x * h, s.y * h, s.r, s.r);
     });
     ctx.globalAlpha = 1;
-    if (P.state !== "idle") {
-      ctx.shadowColor = "#ffe98a"; ctx.shadowBlur = 26; ctx.fillStyle = "#fffbe8";
-      ctx.beginPath(); ctx.arc(P.bx * h, P.by * h, BR * h, 0, 7); ctx.fill();
+
+    /* sol */
+    ctx.fillStyle = "#0a3450";
+    ctx.fillRect(0, h - 4, w, 4);
+    ctx.strokeStyle = "#38b6ff"; ctx.lineWidth = 2;
+    ctx.beginPath(); ctx.moveTo(0, h - 2); ctx.lineTo(w, h - 2); ctx.stroke();
+
+    /* barrières */
+    if (F.state !== "idle") {
+      const n0 = Math.max(0, Math.floor((F.camX - FIRST_X) / SPACING) - 1);
+      for (let n = n0; n < n0 + 8; n++) {
+        const px = (pipeX(n) - F.camX) * h;
+        if (px > w + 10 || px + PIPE_W * h < -10) continue;
+        const gy = gapAt(n) * h, gh = GAP * h, pw = PIPE_W * h;
+        ctx.shadowColor = "#38b6ff"; ctx.shadowBlur = 14;
+        ctx.fillStyle = "#0f5f8f";
+        ctx.fillRect(px, 0, pw, gy - gh / 2);
+        ctx.fillRect(px, gy + gh / 2, pw, h - (gy + gh / 2));
+        ctx.shadowBlur = 0;
+        ctx.fillStyle = "#7de3ff";
+        ctx.fillRect(px, gy - gh / 2 - 5, pw, 5);
+        ctx.fillRect(px, gy + gh / 2, pw, 5);
+      }
+    }
+
+    /* traînée + comète */
+    if (F.state === "fly" || F.state === "dead" || F.state === "count") {
+      F.trail.forEach((p, i) => {
+        const a = (i + 1) / F.trail.length;
+        ctx.globalAlpha = a * 0.55;
+        ctx.fillStyle = "#ffd27d";
+        ctx.beginPath(); ctx.arc(p.x * h, p.y * h, RAD * h * a * 0.9, 0, 7); ctx.fill();
+      });
+      ctx.globalAlpha = 1;
+      ctx.shadowColor = "#ffcf6b"; ctx.shadowBlur = 26;
+      const grd = ctx.createRadialGradient(COMET_X * h, F.y * h, 1, COMET_X * h, F.y * h, RAD * h);
+      grd.addColorStop(0, "#fffbe8"); grd.addColorStop(1, "#ff9d3c");
+      ctx.fillStyle = grd;
+      ctx.beginPath(); ctx.arc(COMET_X * h, F.y * h, RAD * h, 0, 7); ctx.fill();
       ctx.shadowBlur = 0;
     }
+
+    /* score */
+    ctx.font = "900 " + Math.round(h * 0.13) + "px 'Courier New', monospace";
+    ctx.textAlign = "center";
+    ctx.fillStyle = "#ffffff22";
+    ctx.fillText(F.score, w / 2, h * 0.2);
   }
 
+  /* ── HUD ── */
   function hudShow(big, sub) { hud.classList.remove("hidden"); hudBig.textContent = big; hudSub.innerHTML = sub; }
   function hudHide() { hud.classList.add("hidden"); }
 
   function render() {
-    setStat("st-live", P.sl + " — " + P.sr);
-    setStat("st-role", NET.mode === "local" ? "Local" : (NET.mode === "host" ? "Raquette gauche" : "Raquette droite"));
+    setStat("st-live", F.score);
+    setStat("st-palier", palierFor(F.score));
     setStat("st-score", S.scores[0] + " — " + S.scores[1]);
-    setStat("st-target", TARGET + " points");
-    $("pc-1").classList.toggle("active", P.state === "play" && P.vx < 0);
-    $("pc-2").classList.toggle("active", P.state === "play" && P.vx > 0);
+    setStat("st-opp", isSolo() ? "Record : " + bestScore() : NET.mode === "local" ? (F.localTurn ? "Joueur " + F.localTurn : "—") : (F.oppScore == null ? "—" : F.oppScore));
+    $("pc-1").classList.toggle("active", F.state === "fly" && (NET.mode === "local" ? F.localTurn === 1 : NET.myRole === 1));
+    $("pc-2").classList.toggle("active", F.state === "fly" && (NET.mode === "local" ? F.localTurn === 2 : NET.myRole === 2));
   }
   GAME.render = render;
 
   /* ── Manches ── */
   function startRound() {
-    P.sl = 0; P.sr = 0; P.yL = P.yR = 0.5; P.shownL = P.shownR = 0.5;
-    P.flash = 0; P.trail = []; P.acc = 0; P.last = 0; P.tick = 0;
-    P.lastPos = Date.now(); P.warned = false; P.lastSend = 0;
+    const seed = (Math.random() * 4294967295) >>> 0;
+    F.myScore = null; F.oppScore = null;
+    F.localScores = [0, 0];
+    F.mul = speedMul();
+    setSeed(seed);
+    clearTimeout(F.waitTimer);
     clearHist();
-    serve(Math.random() < 0.5 ? 1 : 2);
-    P.state = "count"; P.countEnd = Date.now() + 3200;
-    resetTimer();
-    hideOverlay();
-    if (NET.mode === "host" && NET.connected) send({ t: "pstart" });
-    render();
+    if (isSolo()) { hideOverlay(); beginRun(); return; }
+    if (NET.mode === "local") {
+      F.localTurn = 1; F.state = "idle";
+      hudShow("À " + S.names[0], "Graine " + seed + " — le même parcours sera rejoué par le second joueur.<small>Cliquez, touchez l’écran ou utilisez la touche choisie pour décoller.</small>");
+      render();
+    } else {
+      send({ t: "fseed", seed: seed, mul: F.mul });
+      beginRun();
+    }
   }
   GAME.onStart = startRound;
   GAME.onNext = startRound;
   GAME.onQuit = function () {
-    P.state = "idle"; stopTimer(); resetTimer();
-    P.sl = P.sr = 0; hideOverlay(); clearHist();
-    hudShow("🏓", "Partie arrêtée. Lancez une partie pour repartir.");
+    F.state = "idle"; stopTimer(); resetTimer(); clearTimeout(F.waitTimer);
+    F.score = 0; F.myScore = F.oppScore = null; F.localTurn = 0;
+    hideOverlay(); clearHist();
+    hudShow("🚀", "Partie arrêtée. Lancez une manche pour repartir.");
     renderCommon();
   };
 
   /* ── Réseau ── */
   GAME.onData = function (d) {
     switch (d.t) {
-      case "pstart":
-        P.sl = 0; P.sr = 0; P.trail = []; P.flash = 0; P.lastSend = 0;
-        hideOverlay();
-        P.state = "count"; P.countEnd = Date.now() + 3200;
-        resetTimer(); render();
+      case "fseed":
+        F.myScore = null; F.oppScore = null;
+        F.mul = d.mul || 1;
+        $("sel-speed").value = String(F.mul);
+        setSeed(d.seed);
+        clearHist(); hideOverlay();
+        beginRun();
         break;
-      case "ball":
-        if (NET.mode !== "guest") return;
-        P.tbx = d.x; P.tby = d.y; P.yL = d.l;
-        if (d.sl !== P.sl || d.sr !== P.sr) {
-          P.flash = 1;
-          addHist(d.sl + d.sr, (d.sl > P.sl ? "🔵 " : "🔴 ") + S.names[d.sl > P.sl ? 0 : 1], d.sl + " — " + d.sr);
-          P.sl = d.sl; P.sr = d.sr; snd("point"); render();
-        }
-        break;
-      case "pos":
-        if (NET.mode !== "host") return;
-        P.yR = d.y; P.lastPos = Date.now(); P.warned = false;
-        break;
-      case "pend":
-        if (NET.mode !== "guest") return;
-        P.sl = d.sl; P.sr = d.sr; P.state = "done"; stopTimer();
-        const w = P.sl > P.sr ? 1 : 2;
-        S.rounds++; S.scores[w - 1]++;
-        renderPlayers(); render();
-        snd(w === NET.myRole ? "win" : "lose");
-        showOverlay({
-          title: "🎉 " + S.names[w - 1] + " gagne la partie !",
-          stats: [[P.sl + " — " + P.sr, "Score"], [fmtTime(S.elapsed), "Temps"], [S.scores[0] + " — " + S.scores[1], "Parties"]]
-        });
-        hudShow("🏁", S.names[w - 1] + " l'emporte " + P.sl + " — " + P.sr + ".");
+      case "fscore":
+        F.oppScore = d.value;
+        addHist(S.rounds + 1, "🛰 " + S.names[NET.myRole === 1 ? 1 : 0], d.value);
+        if (F.state === "dead") resolveNet(); else render();
         break;
     }
   };
   GAME.onDisconnected = function () {
-    if (P.state === "play" || P.state === "count") {
-      P.state = "done"; stopTimer();
-      showOverlay({ title: "🏳️ Adversaire déconnecté", stats: [[P.sl + " — " + P.sr, "Score au moment de l'arrêt"]] });
-      hudShow("🏳️", "Adversaire déconnecté.");
-    }
+    if (F.state === "fly" || F.state === "dead" || F.state === "count") forfeit(NET.myRole);
   };
   GAME.onModeChange = function () {
-    P.state = "idle"; P.sl = P.sr = 0;
-    hudShow("🏓", "Choisissez « Lancer la partie » pour commencer.");
+    F.state = "idle"; F.localTurn = 0; F.myScore = F.oppScore = null;
+    hudShow("🚀", "Choisissez « Lancer la manche » pour commencer.");
   };
 
-  /* ── Redimensionnement + commandes ── */
+  /* ── Redimensionnement + entrées ── */
   function resize() {
     const wrap = $("stage-wrap");
-    let w = wrap.clientWidth, h = w * 9 / 16;
-    if (h > wrap.clientHeight) { h = wrap.clientHeight; w = h * 16 / 9; }
+    const availW = wrap.clientWidth, availH = wrap.clientHeight;
+    let w = availW, h = w * 9 / 16;
+    if (h > availH) { h = availH; w = h * 16 / 9; }
     cv.width = Math.max(320, Math.round(w));
     cv.height = Math.max(180, Math.round(h));
     draw();
@@ -1335,31 +1402,15 @@
   window.addEventListener("resize", resize);
 
   GAME.init = function () {
-    initStars();
+    setSeed(1);
     resize();
-    const setFromPointer = (e) => {
-      const r = cv.getBoundingClientRect();
-      const y = clamp((e.clientY - r.top) / r.height, PADH / 2, 1 - PADH / 2);
-      if (NET.mode === "guest") P.yR = y; else P.yL = y;
-    };
-    cv.addEventListener("pointermove", (e) => { e.preventDefault(); setFromPointer(e); });
-    cv.addEventListener("pointerdown", (e) => { e.preventDefault(); setFromPointer(e); });
-
+    cv.addEventListener("pointerdown", (e) => { e.preventDefault(); flap(); });
     document.addEventListener("keydown", (e) => {
       if (/^(INPUT|TEXTAREA|SELECT)$/.test(document.activeElement.tagName)) return;
-      if (e.key === "ArrowUp") { P.keys.up = true; e.preventDefault(); }
-      if (e.key === "ArrowDown") { P.keys.down = true; e.preventDefault(); }
-      if (e.key === "w" || e.key === "z") P.keys.w = true;
-      if (e.key === "s") P.keys.s = true;
+      if (keyMatches(e)) { e.preventDefault(); flap(); }
     });
-    document.addEventListener("keyup", (e) => {
-      if (e.key === "ArrowUp") P.keys.up = false;
-      if (e.key === "ArrowDown") P.keys.down = false;
-      if (e.key === "w" || e.key === "z") P.keys.w = false;
-      if (e.key === "s") P.keys.s = false;
-    });
-
-    hudShow("🏓", "Pong Néon — la raquette suit la souris ou le doigt.<small>Créez ou rejoignez une partie, puis lancez-la.</small>");
+    $("sel-mode").addEventListener("change", () => { renderPlayers(); render(); });
+    hudShow("🚀", "Comète — un seul bouton : clic, tap ou la touche choisie dans le bandeau.<small>Duel en ligne, à deux sur cet écran, ou solo : lancez la manche.</small>");
     requestAnimationFrame(frame);
     render();
   };

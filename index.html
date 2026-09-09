@@ -110,7 +110,7 @@ main{max-width:1180px; margin:0 auto; padding:0 clamp(16px,4vw,44px)}
 .card:hover .aw-s2,.card:focus-visible .aw-s2{transform:translateX(26px); transition-delay:.07s}
 .card:hover .aw-s3,.card:focus-visible .aw-s3{transform:translateX(26px); transition-delay:.14s}
 
-/* Flappy : la comète franchit la barrière */
+/* Comète : la comète franchit la barrière */
 .card:hover .fl-comet,.card:focus-visible .fl-comet{transform:translate(26px,-14px)}
 .card:hover .fl-trail,.card:focus-visible .fl-trail{opacity:1}
 
@@ -286,7 +286,8 @@ kbd{background:var(--white); border:1px solid var(--border); border-bottom-width
 
 <main>
   <p class="lead">Cliquez sur une tuile, ou tapez son numéro. Chaque jeu se joue <b>à deux</b> :
-     en ligne, de navigateur à navigateur, ou en local sur un seul écran.</p>
+     en ligne, de navigateur à navigateur, ou en local sur un seul écran.
+     <b>Comète</b> et <b>Météorite</b> se jouent aussi <b>en solo</b>.</p>
 
   <ul class="grid">
 
@@ -371,7 +372,7 @@ kbd{background:var(--white); border:1px solid var(--border); border-bottom-width
     </li>
 
     <li>
-      <a class="card" style="--accent:#7c3aed" href="jeu_flappycomete_enligne.html" data-key="4">
+      <a class="card" style="--accent:#7c3aed" href="jeu_comete_enligne.html" data-key="4">
         <span class="key">4</span>
         <span class="art">
           <svg viewBox="0 0 132 96" aria-hidden="true">
@@ -394,15 +395,15 @@ kbd{background:var(--white); border:1px solid var(--border); border-bottom-width
       </svg>
         </span>
         <span class="body">
-          <span class="name">Flappy Comète</span>
-          <span class="desc">Un seul bouton pour piloter une comète entre les barrages. Même parcours pour les deux joueurs.</span>
-          <span class="file">jeu_flappycomete_enligne.html</span>
+          <span class="name">Comète</span>
+          <span class="desc">Un seul bouton pour piloter une comète entre les barrages. Duel sur le même parcours, ou solo.</span>
+          <span class="file">jeu_comete_enligne.html</span>
         </span>
       </a>
     </li>
 
     <li>
-      <a class="card" style="--accent:#0d9488" href="jeu_cometsurvival_enligne.html" data-key="5">
+      <a class="card" style="--accent:#0d9488" href="jeu_meteorite_enligne.html" data-key="5">
         <span class="key">5</span>
         <span class="art">
           <svg viewBox="0 0 132 96" aria-hidden="true">
@@ -419,9 +420,9 @@ kbd{background:var(--white); border:1px solid var(--border); border-bottom-width
       </svg>
         </span>
         <span class="body">
-          <span class="name">Comet Survival</span>
-          <span class="desc">Survivre le plus longtemps sous une pluie de comètes strictement identique pour les deux joueurs.</span>
-          <span class="file">jeu_cometsurvival_enligne.html</span>
+          <span class="name">Météorite</span>
+          <span class="desc">Survivre le plus longtemps sous une pluie de météorites identique pour les deux joueurs, ou en solo.</span>
+          <span class="file">jeu_meteorite_enligne.html</span>
         </span>
       </a>
     </li>
@@ -496,7 +497,7 @@ kbd{background:var(--white); border:1px solid var(--border); border-bottom-width
           <h3>Sur un seul écran <em>sans réseau</em></h3>
           <p>Le bouton <b>« Jouer en local »</b> de la même fenêtre fait tout tenir sur un poste :
              les deux joueurs se passent la souris pour le Morpion, les Dames et l'Awalé, et jouent
-             chacun leur tour, sur la même graine, pour Flappy Comète et Comet Survival. Pong Néon
+             chacun leur tour, sur la même graine, pour Comète et Météorite. Pong Néon
              se joue à deux en même temps, W / S d'un côté et ↑ / ↓ de l'autre.</p>
         </div>
       </div>
@@ -524,7 +525,7 @@ kbd{background:var(--white); border:1px solid var(--border); border-bottom-width
     <p>C'est le menu de la collection. Il ne contient aucun jeu : il ne fait que
     les lancer. Chaque jeu est un fichier autonome, que l'on peut aussi ouvrir
     directement, mettre en favori ou placer en raccourci sur le bureau. Chaque
-    jeu comporte un bouton <b>🏠 Menu</b> qui ramène ici.</p>
+    jeu comporte un bouton <b>✕ Quitter</b> qui ramène ici.</p>
 
     <h3>Lancer un jeu</h3>
     <ul>
@@ -544,10 +545,28 @@ kbd{background:var(--white); border:1px solid var(--border); border-bottom-width
       <tr><td>1</td><td>Morpion</td><td>Aligner ses symboles, en 3×3 ou 4×4, avant l'adversaire.</td></tr>
       <tr><td>2</td><td>Jeu de dames</td><td>Le damier classique, prises obligatoires et promotion en dame.</td></tr>
       <tr><td>3</td><td>Awalé</td><td>Semer ses graines dans le sens antihoraire et capturer celles d'en face. Premier à 25 graines.</td></tr>
-      <tr><td>4</td><td>Flappy Comète</td><td>Un seul bouton, une comète, des barrages. Le meilleur score gagne la manche.</td></tr>
-      <tr><td>5</td><td>Comet Survival</td><td>Survivre à une pluie de comètes identique pour les deux joueurs, 90 secondes au plus.</td></tr>
+      <tr><td>4</td><td>Comète</td><td>Un seul bouton, une comète, des barrages. Vitesse et touche réglables, duel ou solo.</td></tr>
+      <tr><td>5</td><td>Météorite</td><td>Survivre à une pluie de météorites, 90 secondes au plus. Vitesse de chute et touches réglables, duel ou solo.</td></tr>
       <tr><td>6</td><td>Pong Néon</td><td>Le tennis des années 80, en temps réel. Premier à dix points.</td></tr>
     </table>
+
+    <h3>Boutons présents dans tous les jeux</h3>
+    <table>
+      <tr><th>Bouton</th><th>Rôle</th></tr>
+      <tr><td><b>📜 Historique</b></td><td>Ouvre le relevé de la partie dans une fenêtre, avec un bouton
+          <b>🖨 Imprimer</b>. Le même relevé est proposé dans la fenêtre de fin de manche.</td></tr>
+      <tr><td><b>🔊 Son / 🔇 Muet</b></td><td>Coupe ou rétablit les effets sonores. Le choix est mémorisé
+          et s'applique aux six jeux.</td></tr>
+      <tr><td><b>❓ Aide</b></td><td>Les règles du jeu et le détail de son fonctionnement en réseau.</td></tr>
+      <tr><td><b>⟲ Réinitialiser</b></td><td>Arrête la partie en cours et vide le plateau, sans quitter la page.</td></tr>
+      <tr><td><b>✕ Quitter</b></td><td>Referme la partie et revient à ce menu.</td></tr>
+    </table>
+
+    <h3>Jouer seul</h3>
+    <p><b>Comète</b> et <b>Météorite</b> proposent un choix <b>1 joueur — solo</b> dans leur bandeau :
+    ni adversaire ni connexion, le meilleur score est conservé sur l'appareil. Ces deux jeux
+    laissent aussi régler la <b>vitesse</b> et les <b>touches</b> ; en duel, le réglage de l'hôte
+    s'applique aux deux joueurs pour que le défi reste identique.</p>
 
     <h3>Jouer à deux</h3>
     <p>Dans chaque jeu, le bouton <b>🌐 Connexion</b> ouvre la même fenêtre, avec
@@ -561,8 +580,9 @@ kbd{background:var(--white); border:1px solid var(--border); border-bottom-width
           <td>Saisissez le code reçu, ou ouvrez directement le lien d'invitation : le code est alors
               déjà rempli.</td></tr>
       <tr><td><b>Jouer en local</b></td>
-          <td>Aucun réseau : les deux joueurs se partagent l'écran. Pour Flappy Comète et Comet
-              Survival, chacun joue son tour sur la même graine, donc sur le même parcours.</td></tr>
+          <td>Aucun réseau : les deux joueurs se partagent l'écran. Pour Comète et Météorite,
+              chacun joue son tour sur la même graine, donc sur le même parcours ; ces deux jeux
+              proposent aussi un vrai mode solo.</td></tr>
     </table>
     <p>La liaison est <b>directe d'un navigateur à l'autre</b> (WebRTC, via la
     bibliothèque PeerJS) : aucune donnée de partie ne passe par un serveur, seul
@@ -615,7 +635,7 @@ kbd{background:var(--white); border:1px solid var(--border); border-bottom-width
         <tr><td>Morpion, Dames, Awalé</td>
             <td>Le <b>coup</b> joué, puis un état complet renvoyé par l'hôte. Les deux postes
                 appliquent la même fonction de règles : l'état reste identique des deux côtés.</td></tr>
-        <tr><td>Flappy Comète, Comet Survival</td>
+        <tr><td>Comète, Météorite</td>
             <td>Une <b>graine</b> au départ, un <b>score</b> à l'arrivée, et rien entre les deux.
                 Le parcours est reconstruit à l'identique de chaque côté par un générateur
                 déterministe, et la simulation tourne à pas fixe en unités relatives : un
