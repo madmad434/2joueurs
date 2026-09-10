@@ -1,0 +1,1657 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Tennis</title>
+
+<style>
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    /* ── CHARTE GRAPHIQUE (identique au Jeu des paires) ── */
+    --brand-light:  #C2F6FF;
+    --brand-dark:   #38B6FF;
+
+    --config-bg:    #38B6FF;
+    --config-border:#1e9fe8;
+    --config-text:  #063a52;
+    --config-muted: #0a5b80;
+    --input-bg:     #ffffff;
+    --input-border: #7dd3f0;
+    --game-bg:      #C2F6FF;
+    --side-bg:      #38B6FF;
+    --side-border:  #1e9fe8;
+    --stats-bg:     #38B6FF;
+    --stats-border: #1e9fe8;
+    --accent:       #0284c7;
+    --accent-light: #e0f6ff;
+    --accent-dark:  #075985;
+    --green:        #10b981;
+    --green-light:  #d1fae5;
+    --green-dark:   #065f46;
+    --red:          #ef4444;
+    --red-light:    #fee2e2;
+    --yellow:       #f59e0b;
+    --yellow-light: #fef3c7;
+    --purple:       #8b5cf6;
+    --cell-bg:      #ffffff;
+    --p1:           #0369a1;
+    --p2:           #b91c1c;
+    --text:         #06283d;
+    --text-muted:   #0a5b80;
+    --radius:       12px;
+    --radius-sm:    8px;
+    --t:            0.18s ease;
+  }
+
+  html, body { width:100%; height:100%; overflow:hidden; background:var(--game-bg); color:var(--text); font-family:'Segoe UI','Helvetica Neue',Arial,sans-serif; user-select:none; }
+  #app { display:flex; flex-direction:column; height:100vh; overflow:hidden; }
+
+  /* ── CONFIG ── */
+  #configpanel {
+    background:var(--config-bg); border-bottom:1px solid var(--config-border);
+    padding:10px 16px; display:flex; align-items:center; gap:10px; flex-wrap:wrap; flex-shrink:0;
+    box-shadow:0 1px 4px #00000010;
+  }
+  .game-title { font-size:1.2rem; font-weight:900; color:#fff; letter-spacing:2px; text-transform:uppercase; white-space:nowrap; font-family:'Courier New',Courier,monospace; margin-right:4px; }
+  .separator  { width:1px; height:28px; background:#8adcff; flex-shrink:0; }
+  .cfg-group  { display:flex; align-items:center; gap:6px; }
+  .cfg-label  { font-size:.72rem; font-weight:800; color:#eaffff; text-transform:uppercase; letter-spacing:.8px; white-space:nowrap; }
+
+  select, input[type=text] {
+    height:34px; background:var(--input-bg); border:1px solid var(--input-border); border-radius:var(--radius-sm);
+    color:var(--config-text); font-size:.85rem; font-family:inherit; font-weight:700; cursor:pointer;
+    outline:none; transition:border-color var(--t),box-shadow var(--t);
+    appearance:none; -webkit-appearance:none; background-color:var(--input-bg);
+    padding:0 8px; box-shadow:0 1px 3px #0000000a;
+  }
+  select {
+    background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%2364748b' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");
+    background-repeat:no-repeat; background-position:right 8px center; padding:0 26px 0 8px;
+  }
+  input[type=text] { cursor:text; width:130px; }
+  select:hover, input[type=text]:hover { border-color:var(--accent); }
+  select:focus, input[type=text]:focus { border-color:var(--accent); box-shadow:0 0 0 3px #3b82f630; }
+  select:disabled, input:disabled { opacity:.5; cursor:not-allowed; }
+  select.dim-select { width:78px; }
+  select#sel-symbols { min-width:150px; }
+
+  .btn {
+    display:inline-flex; align-items:center; gap:6px; height:34px; padding:0 14px;
+    border-radius:var(--radius-sm); border:1px solid var(--input-border);
+    background:var(--input-bg); color:var(--config-text);
+    font-size:.82rem; font-family:inherit; font-weight:700;
+    cursor:pointer; transition:all var(--t); white-space:nowrap; box-shadow:0 1px 3px #0000000a;
+  }
+  .btn:hover { border-color:var(--accent); background:var(--accent-light); color:var(--accent-dark); }
+  .btn:disabled { opacity:.45; cursor:not-allowed; }
+  .btn:disabled:hover { border-color:var(--input-border); background:var(--input-bg); color:var(--config-text); }
+  .btn.primary { background:var(--accent); color:#fff; border-color:var(--accent); font-size:.88rem; padding:0 18px; box-shadow:0 2px 8px #3b82f640; }
+  .btn.primary:hover { background:var(--accent-dark); }
+  .btn.danger { background:var(--red-light); border-color:#fca5a5; color:#b91c1c; }
+  .btn.danger:hover { background:#fecaca; border-color:var(--red); }
+  .btn.btn-net  { background:#eff6ff; border-color:#93c5fd; color:#1d4ed8; }
+  .btn.btn-net:hover  { background:#dbeafe; border-color:#3b82f6; }
+  .btn.btn-aide-toggle { background:#fefce8; border-color:#fde68a; color:#92400e; }
+  .btn.btn-aide-toggle:hover { background:#fef9c3; border-color:#f59e0b; }
+  #btn-quit { margin-left:auto; }
+
+  /* ── BANDEAU RÉSEAU ── */
+  #netbar { display:flex; align-items:center; gap:12px; padding:6px 16px; background:#eaf9ff; border-bottom:1px solid var(--config-border); flex-shrink:0; font-size:.78rem; font-weight:700; color:var(--config-text); flex-wrap:wrap; }
+  .dot { width:10px; height:10px; border-radius:50%; background:#94a3b8; flex-shrink:0; box-shadow:0 0 0 3px #94a3b830; }
+  .dot.on   { background:var(--green); box-shadow:0 0 0 3px #10b98130; animation:blink 2s ease-in-out infinite; }
+  .dot.wait { background:var(--yellow); box-shadow:0 0 0 3px #f59e0b30; animation:blink 1s ease-in-out infinite; }
+  .dot.off  { background:var(--red); box-shadow:0 0 0 3px #ef444430; }
+  @keyframes blink { 0%,100%{opacity:1} 50%{opacity:.45} }
+  .code-pill { font-family:'Courier New',Courier,monospace; font-size:1rem; font-weight:900; letter-spacing:3px; background:#fff; border:1px solid var(--input-border); border-radius:var(--radius-sm); padding:3px 12px; color:var(--accent-dark); user-select:text; }
+  #net-ping { margin-left:auto; font-family:'Courier New',Courier,monospace; color:var(--text-muted); }
+
+  /* ── VALIDATION ── */
+  #val-msg { font-size:.75rem; color:#b91c1c; padding:4px 16px; font-weight:700; background:var(--red-light); border-bottom:1px solid #fca5a5; display:none; }
+  #val-msg.visible { display:block; }
+  #val-msg.info { color:#1e40af; background:#dbeafe; border-bottom-color:#93c5fd; }
+
+  /* ── STATS BAR ── */
+  #statsbar { display:flex; align-items:stretch; background:var(--stats-bg); border-bottom:1px solid var(--stats-border); flex-shrink:0; }
+  .stat-block { display:flex; flex-direction:column; align-items:center; justify-content:center; padding:4px 16px; flex:1; border-right:1px solid var(--stats-border); transition:background var(--t); cursor:default; }
+  .stat-block:last-child { border-right:none; }
+  .stat-block:hover { background:#1e9fe8; }
+  .stat-label { font-size:.6rem; font-weight:800; text-transform:uppercase; letter-spacing:1.2px; color:#dff7ff; }
+  .stat-value { font-family:'Courier New',Courier,monospace; font-size:1rem; font-weight:700; color:#fff; line-height:1.1; }
+  .stat-value.c-green  { color:#7dffcf; }
+  .stat-value.c-yellow { color:#ffe27a; }
+  .stat-value.c-purple { color:#e5c9ff; }
+
+  /* ── MAIN ── */
+  #main { display:flex; flex:1 1 auto; overflow:hidden; min-height:0; }
+
+  /* ── PANNEAU LATÉRAL ── */
+  #sidepanel { width:225px; min-width:200px; background:var(--side-bg); border-right:1px solid var(--side-border); display:flex; flex-direction:column; padding:14px 12px; overflow-y:auto; flex-shrink:0; gap:16px; box-shadow:2px 0 8px #00000008; }
+  .side-section-title { font-size:.63rem; font-weight:900; color:#fff; text-transform:uppercase; letter-spacing:1.5px; padding-bottom:6px; border-bottom:2px solid #1e9fe8; }
+
+  .player-card { display:flex; align-items:center; gap:10px; background:#fff; border:2px solid #fff; border-radius:var(--radius-sm); padding:8px 10px; margin-top:8px; transition:all var(--t); }
+  .player-card.active { border-color:var(--yellow); box-shadow:0 0 0 3px #fde68a80; transform:translateX(2px); }
+  .player-card .pc-mark { font-size:1.5rem; line-height:1; width:34px; height:34px; display:flex; align-items:center; justify-content:center; border-radius:var(--radius-sm); background:var(--accent-light); }
+  .player-card.p2 .pc-mark { background:var(--red-light); }
+  .player-card .pc-body { display:flex; flex-direction:column; min-width:0; flex:1; }
+  .player-card .pc-name { font-size:.8rem; font-weight:800; color:var(--config-text); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .player-card .pc-sub  { font-size:.62rem; font-weight:800; text-transform:uppercase; letter-spacing:.6px; color:var(--text-muted); }
+  .player-card .pc-score { font-family:'Courier New',Courier,monospace; font-size:1.15rem; font-weight:700; color:var(--accent-dark); }
+  .player-card.p2 .pc-score { color:var(--p2); }
+
+  .side-counter { display:flex; align-items:center; justify-content:space-between; background:#f3e8ff; border:1px solid #c4b5fd; border-radius:var(--radius-sm); padding:6px 10px; margin-top:8px; }
+  .side-counter .sc-label { font-size:.74rem; color:#6d28d9; font-weight:700; }
+  .side-counter .sc-val   { font-family:'Courier New',Courier,monospace; color:#6d28d9; font-weight:700; font-size:.9rem; }
+
+  #chat-box { display:flex; flex-direction:column; gap:5px; margin-top:8px; max-height:150px; overflow-y:auto; }
+  .chat-msg { background:#fff; border-radius:8px; padding:4px 8px; font-size:.74rem; color:var(--config-text); line-height:1.35; word-break:break-word; user-select:text; }
+  .chat-msg b { color:var(--accent-dark); }
+  .chat-msg.mine b { color:var(--p2); }
+  .chat-msg.sys { background:#dbeafe; color:#1e40af; font-weight:700; }
+  #chat-form { display:flex; gap:5px; margin-top:6px; }
+  #chat-input { flex:1; min-width:0; width:auto; height:30px; font-weight:600; font-size:.78rem; }
+  #chat-send { height:30px; padding:0 10px; }
+  #chat-quick { display:flex; gap:4px; margin-top:5px; flex-wrap:wrap; }
+  #chat-quick button { background:#fff; border:1px solid var(--input-border); border-radius:6px; font-size:.95rem; padding:2px 6px; cursor:pointer; }
+  #chat-quick button:hover { background:var(--accent-light); border-color:var(--accent); }
+
+  #history-list { display:flex; flex-direction:column; gap:4px; margin-top:8px; max-height:140px; overflow-y:auto; }
+  .hist-item { display:flex; align-items:center; gap:6px; background:#fff; border-radius:6px; padding:3px 8px; font-size:.74rem; font-weight:700; color:var(--config-text); }
+  .hist-item .hi-num { font-family:'Courier New',Courier,monospace; color:var(--text-muted); min-width:20px; }
+  .hist-item .hi-pos { font-family:'Courier New',Courier,monospace; margin-left:auto; color:var(--accent-dark); }
+
+  /* ── ZONE DE JEU ── */
+  #grid-area { flex:1; display:flex; align-items:center; justify-content:center; padding:16px; overflow:hidden; min-width:0; background:var(--game-bg); position:relative; }
+  #board { display:flex; flex-direction:column; gap:6px; align-items:center; }
+  .board-row { display:flex; gap:6px; }
+
+  .cell {
+    background:var(--cell-bg); border:2px solid var(--input-border); border-radius:var(--radius);
+    display:flex; align-items:center; justify-content:center; cursor:pointer; line-height:1;
+    transition:border-color var(--t),box-shadow var(--t),background var(--t);
+    box-shadow:0 2px 8px #0284c718;
+  }
+  .cell.playable:hover { border-color:var(--accent); box-shadow:0 4px 16px #3b82f640,0 0 0 3px #3b82f620; }
+  .cell:not(.playable) { cursor:default; }
+  .cell .mark  { animation:popIn .26s cubic-bezier(.34,1.56,.64,1); }
+  .cell .ghost { opacity:.16; }
+  .cell.p1 { color:var(--p1); }
+  .cell.p2 { color:var(--p2); }
+  .cell.last { box-shadow:0 0 0 3px #f59e0b70; }
+  .cell.win  { background:var(--green-light); border-color:var(--green); animation:winPulse .55s ease 2; }
+  @keyframes popIn { from{transform:scale(0) rotate(-12deg);opacity:0} to{transform:scale(1) rotate(0);opacity:1} }
+  @keyframes winPulse { 0%,100%{box-shadow:0 2px 8px #10b98140} 50%{box-shadow:0 0 0 6px #10b98150} }
+
+  #placeholder { text-align:center; color:var(--accent-dark); font-weight:800; font-size:1rem; opacity:.8; max-width:460px; line-height:1.6; }
+  #placeholder .ph-big { font-size:3rem; display:block; margin-bottom:10px; }
+
+  /* ── OVERLAYS / MODALES ── */
+  .modal { display:none; position:fixed; inset:0; background:#00000070; backdrop-filter:blur(8px); z-index:150; align-items:center; justify-content:center; }
+  .modal.show { display:flex; }
+  .modal-card { background:#fff; border:1px solid var(--side-border); border-radius:20px; padding:30px 36px; display:flex; flex-direction:column; gap:16px; box-shadow:0 30px 80px #00000030; animation:slideUp .35s cubic-bezier(.34,1.56,.64,1); width:520px; max-width:92vw; max-height:92vh; overflow-y:auto; }
+  @keyframes slideUp { from{transform:translateY(30px) scale(.95);opacity:0} to{transform:translateY(0) scale(1);opacity:1} }
+  .modal-card h2 { font-size:1.35rem; font-weight:900; color:var(--accent-dark); }
+  .modal-card p  { font-size:.85rem; color:var(--text-muted); line-height:1.5; }
+  .modal-head { display:flex; align-items:center; justify-content:space-between; gap:12px; }
+  .modal-close { background:#f1f5f9; border:1px solid #e2e8f0; border-radius:8px; width:32px; height:32px; cursor:pointer; font-size:1rem; font-weight:700; color:#64748b; }
+
+  .choice-grid { display:flex; flex-direction:column; gap:10px; }
+  .choice {
+    display:flex; align-items:center; gap:14px; text-align:left; cursor:pointer;
+    background:var(--accent-light); border:2px solid var(--input-border); border-radius:var(--radius);
+    padding:14px 16px; transition:all var(--t); font-family:inherit;
+  }
+  .choice:hover:not(:disabled) { border-color:var(--accent); background:#d5f1ff; transform:translateY(-1px); }
+  .choice:disabled { opacity:.5; cursor:not-allowed; }
+  .choice .ch-ico  { font-size:1.8rem; }
+  .choice .ch-tit  { font-size:.95rem; font-weight:900; color:var(--accent-dark); }
+  .choice .ch-sub  { font-size:.76rem; color:var(--text-muted); font-weight:600; }
+
+  .field-row { display:flex; align-items:center; gap:8px; flex-wrap:wrap; }
+  .field-row label { font-size:.72rem; font-weight:800; text-transform:uppercase; letter-spacing:.8px; color:var(--text-muted); min-width:92px; }
+  .code-input { font-family:'Courier New',Courier,monospace; font-size:1.4rem !important; letter-spacing:6px; text-align:center; text-transform:uppercase; height:48px !important; width:190px !important; font-weight:900 !important; }
+  .big-code { font-family:'Courier New',Courier,monospace; font-size:2.4rem; font-weight:900; letter-spacing:10px; color:var(--accent-dark); background:var(--accent-light); border:2px dashed var(--accent); border-radius:var(--radius); padding:14px; text-align:center; user-select:text; }
+  .share-link { display:flex; gap:6px; }
+  .share-link input { flex:1; min-width:0; width:auto !important; font-size:.75rem !important; font-weight:600 !important; }
+  .note { background:#fef3c7; border:1px solid #fde68a; border-radius:var(--radius-sm); padding:10px 12px; font-size:.78rem; color:#92400e; line-height:1.5; }
+  .note.blue { background:#dbeafe; border-color:#93c5fd; color:#1e40af; }
+
+  .overlay-stats { display:flex; gap:24px; background:var(--stats-bg); border-radius:var(--radius); padding:14px 20px; width:100%; justify-content:center; }
+  .ov-stat { display:flex; flex-direction:column; align-items:center; gap:2px; }
+  .ov-stat-val { font-family:'Courier New',Courier,monospace; font-size:1.4rem; font-weight:700; color:#fff; }
+  .ov-stat-lbl { font-size:.65rem; font-weight:800; text-transform:uppercase; letter-spacing:1px; color:#dff7ff; }
+  .overlay-buttons { display:flex; gap:10px; flex-wrap:wrap; justify-content:center; }
+  #ov-card { align-items:center; text-align:center; }
+  #ov-title { font-size:1.7rem; font-weight:900; color:var(--green-dark); }
+  #ov-title.draw { color:var(--accent-dark); }
+  #ov-wait { font-size:.82rem; font-weight:700; color:var(--text-muted); display:none; }
+
+  ol.help { margin:0; padding-left:20px; display:flex; flex-direction:column; gap:9px; font-size:.85rem; color:#1e293b; line-height:1.5; }
+
+  /* ══════════ COMPLÉMENTS COMMUNS AUX JEUX DE CETTE SÉRIE ══════════ */
+
+  /* Zone de jeu « plateau » */
+  #grid-area { flex:1; display:flex; align-items:center; justify-content:center; padding:16px; overflow:hidden; min-width:0; background:var(--game-bg); position:relative; }
+
+  /* ── Scène canvas (jeux d'action) ── */
+  #stage-wrap { position:relative; display:flex; align-items:center; justify-content:center; width:100%; height:100%; }
+  canvas.stage {
+    background:#04121f; border:2px solid var(--input-border); border-radius:var(--radius);
+    box-shadow:0 8px 30px #0284c740; max-width:100%; max-height:100%;
+    touch-action:none; display:block;
+  }
+  .hud {
+    position:absolute; inset:0; display:flex; flex-direction:column; align-items:center; justify-content:center;
+    gap:12px; text-align:center; pointer-events:none; color:#fff;
+  }
+  .hud.hidden { display:none; }
+  .hud-big { font-family:'Courier New',Courier,monospace; font-size:clamp(2rem,8vw,4rem); font-weight:900; color:#7de3ff; text-shadow:0 0 22px #38b6ff,0 0 44px #0284c7; }
+  .hud-sub { font-size:.95rem; font-weight:800; background:#031624cc; border:1px solid #38b6ff66; border-radius:12px; padding:8px 16px; max-width:90%; line-height:1.5; }
+  .hud-sub small { display:block; font-weight:600; opacity:.85; margin-top:4px; }
+  .hud button { pointer-events:auto; }
+
+  /* Manettes tactiles */
+  #touchpad { position:absolute; left:0; right:0; bottom:10px; display:none; justify-content:center; gap:10px; pointer-events:none; }
+  #touchpad.on { display:flex; }
+  .tbtn {
+    pointer-events:auto; width:66px; height:56px; border-radius:14px; border:2px solid #38b6ff88;
+    background:#03192bcc; color:#9fe8ff; font-size:1.4rem; font-weight:900; display:flex; align-items:center; justify-content:center;
+    box-shadow:0 4px 14px #00000050; user-select:none;
+  }
+  .tbtn:active { background:#0a3a5acc; color:#fff; }
+
+  /* Bandeau de manches (best of 3) */
+  .round-pips { display:flex; gap:6px; align-items:center; }
+  .pip { width:12px; height:12px; border-radius:50%; background:#ffffff55; border:1px solid #ffffff99; }
+  .pip.p1 { background:#7dffcf; }
+  .pip.p2 { background:#ffb0b0; }
+
+  /* ── AWALÉ ── */
+  #awale { display:flex; align-items:center; justify-content:center; gap:16px; flex-wrap:nowrap; }
+  .store {
+    width:92px; padding:14px 8px; background:#fff; border:2px solid var(--input-border); border-radius:26px;
+    display:flex; flex-direction:column; align-items:center; gap:6px; box-shadow:0 4px 16px #0284c722; min-height:230px; justify-content:center;
+  }
+  .store .st-name { font-size:.68rem; font-weight:900; text-transform:uppercase; letter-spacing:.8px; color:var(--text-muted); text-align:center; word-break:break-word; }
+  .store .st-val  { font-family:'Courier New',Courier,monospace; font-size:2.2rem; font-weight:900; color:var(--accent-dark); line-height:1; }
+  .store .st-lbl  { font-size:.62rem; font-weight:800; text-transform:uppercase; letter-spacing:1px; color:var(--text-muted); }
+  .store.p2 .st-val { color:var(--p2); }
+  .store.gain { animation:storeGain .5s ease; }
+  @keyframes storeGain { 0%,100%{transform:scale(1)} 45%{transform:scale(1.12)} }
+
+  #awale-board { background:#8bd8f4; border:3px solid #4bb3dd; border-radius:28px; padding:14px; display:flex; flex-direction:column; gap:12px; box-shadow:inset 0 3px 12px #0000001f,0 6px 22px #0284c72e; }
+  .awale-row { display:flex; gap:12px; }
+  .pit {
+    width:78px; height:78px; border-radius:50%; background:var(--cell-bg); border:2px solid var(--input-border);
+    display:flex; flex-direction:column; align-items:center; justify-content:center; gap:1px;
+    box-shadow:inset 0 3px 8px #0284c722,0 2px 6px #00000012; position:relative; cursor:default;
+    transition:transform var(--t),border-color var(--t),box-shadow var(--t),background var(--t);
+  }
+  .pit .pit-n { font-family:'Courier New',Courier,monospace; font-size:1.5rem; font-weight:900; color:var(--accent-dark); line-height:1; }
+  .pit .pit-seeds { display:flex; flex-wrap:wrap; gap:2px; justify-content:center; max-width:56px; height:14px; overflow:hidden; }
+  .pit .sd { width:6px; height:6px; border-radius:50%; background:#c98b3a; box-shadow:inset 0 -1px 0 #8a5a1f; }
+  .pit.mine { background:#eefbff; }
+  .pit.playable { cursor:pointer; border-color:var(--accent); box-shadow:0 0 0 3px #3b82f630,inset 0 3px 8px #0284c722; }
+  .pit.playable:hover { transform:translateY(-3px); background:var(--accent-light); }
+  .pit.drop { animation:pitDrop .22s ease; border-color:var(--yellow); }
+  @keyframes pitDrop { 0%{transform:scale(1)} 50%{transform:scale(1.14)} 100%{transform:scale(1)} }
+  .pit.cap { background:var(--green-light); border-color:var(--green); animation:pitDrop .3s ease; }
+  .pit-idx { position:absolute; bottom:4px; font-size:.55rem; font-weight:800; color:#9ac7dc; letter-spacing:.5px; }
+
+  /* Écran d'accueil du plateau */
+  #placeholder { text-align:center; color:var(--accent-dark); font-weight:800; font-size:1rem; opacity:.85; max-width:520px; line-height:1.6; }
+  #placeholder .ph-big { font-size:3rem; display:block; margin-bottom:10px; }
+
+  ol.help { margin:0; padding-left:20px; display:flex; flex-direction:column; gap:9px; font-size:.85rem; color:#1e293b; line-height:1.5; }
+  ul.help { margin:0; padding-left:20px; display:flex; flex-direction:column; gap:7px; font-size:.85rem; color:#1e293b; line-height:1.5; }
+
+  .side-note { background:#fff; border-radius:var(--radius-sm); padding:8px 10px; margin-top:8px; font-size:.72rem; color:var(--config-text); line-height:1.45; font-weight:600; }
+  .side-note b { color:var(--accent-dark); }
+
+  @media (max-width:900px) {
+    #sidepanel { display:none; }
+    .pit { width:56px; height:56px; }
+    .store { width:70px; min-height:170px; }
+  }
+
+  /* ── Fenêtre d'historique ── */
+  #hist-modal { z-index:170; }
+  #hist-modal #history-list { display:flex; flex-direction:column; gap:5px; max-height:52vh; overflow-y:auto; margin-top:0; }
+  #hist-modal .hist-item { background:var(--accent-light); border:1px solid var(--input-border); padding:5px 10px; }
+  #hist-empty { font-size:.85rem; color:var(--text-muted); font-weight:700; text-align:center; padding:18px 0; }
+  #hist-players { font-size:.82rem; font-weight:800; color:var(--accent-dark); background:var(--accent-light);
+    border:1px solid var(--input-border); border-radius:var(--radius-sm); padding:7px 12px; text-align:center; }
+  #net-step-file ul.constraints { margin:10px 0 12px; padding-left:20px; display:flex; flex-direction:column; gap:7px;
+    font-size:.85rem; line-height:1.5; color:#1e293b; }
+  #net-step-file code { background:var(--accent-light); padding:1px 5px; border-radius:5px; font-size:.82em; }
+  .pc-gain { font-size:.72rem; font-weight:900; color:var(--accent-dark); background:#ffffffcc;
+    border-radius:6px; padding:1px 7px; margin-top:3px; align-self:flex-start; letter-spacing:.2px; }
+  #grid-area { padding-bottom:30px; }
+
+  /* ── BATAILLE NAVALE ── */
+  #bn-root { --cs:30px; display:none; flex-direction:column; gap:10px; align-items:center; width:100%; }
+  #bn-bar { display:flex; flex-wrap:wrap; gap:7px; align-items:center; justify-content:center;
+    background:#ffffffcc; border:1px solid var(--input-border); border-radius:var(--radius); padding:7px 10px; }
+  .bn-lbl { font-size:.8rem; font-weight:800; color:var(--accent-dark); }
+  .bn-ship { font:inherit; font-size:.74rem; font-weight:800; padding:5px 9px; border-radius:8px; cursor:pointer;
+    border:2px solid var(--input-border); background:#fff; color:var(--config-text); }
+  .bn-ship b { color:var(--accent-dark); }
+  .bn-ship.cur { border-color:var(--accent); background:var(--accent-light); box-shadow:0 0 0 3px #3b82f630; }
+  .bn-ship.done { opacity:.45; text-decoration:line-through; cursor:default; }
+  #bn-wrap { display:flex; gap:22px; align-items:flex-start; justify-content:center; flex-wrap:wrap; }
+  .bn-side { display:flex; flex-direction:column; gap:6px; align-items:center; }
+  .bn-title { font-size:.78rem; font-weight:900; text-transform:uppercase; letter-spacing:.6px; color:var(--accent-dark); }
+  .bn-grid { display:grid; gap:2px; background:#bfe8fa; padding:5px; border-radius:var(--radius);
+    border:2px solid var(--input-border); box-shadow:0 3px 14px #0284c722; transition:filter var(--t); }
+  .bn-grid.blur { filter:blur(9px); pointer-events:none; }
+  .bn-h { width:var(--cs); height:var(--cs); display:flex; align-items:center; justify-content:center;
+    font-size:calc(var(--cs) * .42); font-weight:900; color:var(--accent-dark); opacity:.75; }
+  .bn-c { width:var(--cs); height:var(--cs); border-radius:4px; background:#e8f8ff; border:1px solid #a5dcf2;
+    transition:background var(--t),transform var(--t); position:relative; }
+  .bn-c.ship { background:#94a3b8; border-color:#64748b; }
+  .bn-c.miss { background:#dbeafe; }
+  .bn-c.miss::after { content:"•"; position:absolute; inset:0; display:flex; align-items:center; justify-content:center;
+    color:#3b82f6; font-size:calc(var(--cs) * .7); font-weight:900; }
+  .bn-c.hit { background:var(--yellow-light); border-color:var(--yellow); }
+  .bn-c.hit::after { content:"✕"; position:absolute; inset:0; display:flex; align-items:center; justify-content:center;
+    color:#b45309; font-size:calc(var(--cs) * .6); font-weight:900; }
+  .bn-c.sunk { background:#fecaca; border-color:#dc2626; }
+  .bn-c.sunk::after { content:"✕"; color:#991b1b; }
+  .bn-c.prev { background:var(--green-light); border-color:var(--green); box-shadow:inset 0 0 0 2px var(--green); }
+  .bn-c.prev-bad { background:#fecaca; border-color:#dc2626; }
+  .bn-dir.on { border-color:var(--accent); background:var(--accent-light); color:var(--accent-dark);
+    box-shadow:0 0 0 3px #3b82f630; }
+  .bn-c.tgt.aim { cursor:pointer; }
+  .bn-c.tgt.aim:hover { background:var(--accent-light); transform:scale(1.12); }
+  #bn-hand { position:absolute; inset:0; display:flex; flex-direction:column; align-items:center; justify-content:center;
+    gap:14px; background:#e0f6ffee; z-index:5; text-align:center; padding:20px; }
+  #bn-hand.hidden { display:none; }
+  #bn-hand-txt { font-size:1.05rem; font-weight:900; color:var(--accent-dark); line-height:1.6; }
+  #bn-hand-txt small { display:block; font-size:.8rem; font-weight:600; color:var(--text-muted); margin-top:6px; }
+  .fleet-row { display:flex; align-items:center; gap:10px; padding:7px 10px; border-radius:var(--radius-sm);
+    background:var(--accent-light); border:1px solid var(--input-border); }
+  .fr-n { flex:1; font-size:.86rem; font-weight:800; color:var(--config-text); }
+  .fr-s { font-size:.74rem; font-weight:700; color:var(--text-muted); }
+  .fr-c { display:flex; align-items:center; gap:8px; }
+  .fr-c b { min-width:20px; text-align:center; font-family:'Courier New',monospace; font-size:1.1rem; color:var(--accent-dark); }
+  .fr-m { width:30px; height:28px; padding:0; justify-content:center; font-size:1rem; font-weight:900; }
+  #fleet-rows { display:flex; flex-direction:column; gap:6px; margin-bottom:10px; }
+  #fleet-presets { display:flex; gap:8px; flex-wrap:wrap; margin-bottom:10px; }
+
+</style>
+</head>
+<body>
+<div id="app">
+
+  <!-- CONFIG -->
+  <div id="configpanel">
+    <span class="game-title">🎾 Tennis</span>
+    <div class="separator"></div>
+    <div class="cfg-group">
+      <span class="cfg-label">Joueurs</span>
+      <select id="sel-mode">
+        <option value="2" selected>2 joueurs — duel</option>
+        <option value="1">1 joueur — entraînement</option>
+      </select>
+    </div>
+    <div class="cfg-group">
+      <span class="cfg-label">Format du terrain</span>
+      <select id="sel-court">
+        <option value="wide" selected>Large (16:9)</option>
+        <option value="compact">Compact — vue verticale</option>
+      </select>
+    </div>
+    <div class="cfg-group">
+      <span class="cfg-label">Ma raquette</span>
+      <select id="sel-view">
+        <option value="left" selected>À gauche</option>
+        <option value="right">À droite</option>
+        <option value="bottom">En bas</option>
+        <option value="top">En haut</option>
+      </select>
+    </div>
+    <div class="separator"></div>
+    <div class="cfg-group">
+      <span class="cfg-label">Mon pseudo</span>
+      <input type="text" id="inp-me" maxlength="14" value="Joueur 1">
+    </div>
+    <div class="separator"></div>
+    <button class="btn primary" id="btn-start">▶ Lancer la partie</button>
+    <button class="btn btn-net" id="btn-connect">🌐 Connexion</button>
+    <button class="btn" id="btn-hist">📜 Historique</button>
+    <button class="btn" id="btn-sound">🔊 Son</button>
+    <button class="btn" id="btn-full">⛶ Plein écran</button>
+    <button class="btn btn-aide-toggle" id="btn-aide-toggle">❓ Aide</button>
+    <button class="btn" id="btn-reset">⟲ Réinitialiser</button>
+    <button class="btn danger" id="btn-quit">✕ Quitter</button>
+  </div>
+
+  <!-- BANDEAU RÉSEAU -->
+  <div id="netbar">
+    <span class="dot" id="net-dot"></span>
+    <span id="net-text">Mode local — les deux joueurs jouent sur cet écran</span>
+    <span id="net-code-wrap" style="display:none;">Code&nbsp;: <span class="code-pill" id="net-code">-----</span></span>
+    <button class="btn" id="btn-copy-link" style="display:none;height:26px;padding:0 10px;font-size:.74rem;">🔗 Copier le lien d'invitation</button>
+    <span id="net-ping"></span>
+  </div>
+
+  <!-- VALIDATION -->
+  <div id="val-msg"></div>
+
+  <!-- STATS BAR -->
+  <div id="statsbar">
+    <div class="stat-block"><span class="stat-label">Temps</span><span class="stat-value" id="st-time">—</span></div>
+    <div class="stat-block"><span class="stat-label">Score</span><span class="stat-value c-yellow" id="st-live">—</span></div>
+    <div class="stat-block"><span class="stat-label">Votre rôle</span><span class="stat-value" id="st-role">—</span></div>
+    <div class="stat-block"><span class="stat-label">Parties gagnées</span><span class="stat-value c-green" id="st-score">—</span></div>
+    <div class="stat-block"><span class="stat-label">Objectif</span><span class="stat-value c-purple" id="st-target">—</span></div>
+  </div>
+
+  <!-- MAIN -->
+  <div id="main">
+
+    <div id="sidepanel">
+      <div>
+        <div class="side-section-title">Joueurs</div>
+        <div class="player-card p1" id="pc-1">
+          <span class="pc-mark" id="pc-mark-1">🟦</span>
+          <span class="pc-body">
+            <span class="pc-name" id="pc-name-1">Joueur 1</span>
+            <span class="pc-sub"  id="pc-sub-1">Hôte</span>
+            <span class="pc-gain" id="pc-gain-1" style="display:none"></span>
+          </span>
+          <span class="pc-score" id="pc-score-1">0</span>
+        </div>
+        <div class="player-card p2" id="pc-2">
+          <span class="pc-mark" id="pc-mark-2">🟥</span>
+          <span class="pc-body">
+            <span class="pc-name" id="pc-name-2">Joueur 2</span>
+            <span class="pc-sub"  id="pc-sub-2">Invité</span>
+            <span class="pc-gain" id="pc-gain-2" style="display:none"></span>
+          </span>
+          <span class="pc-score" id="pc-score-2">0</span>
+        </div>
+        <div class="side-counter"><span class="sc-label">Matchs nuls</span><span class="sc-val" id="sc-draws">0</span></div>
+        <div class="side-counter"><span class="sc-label">Manches jouées</span><span class="sc-val" id="sc-rounds">0</span></div>
+        <div class="side-note">La raquette suit la <b>souris</b> ou le <b>doigt</b>. Au clavier : <b>↑ ↓</b> ou <b>← →</b> selon l'orientation. En local, joueur 1 avec <b>W</b> / <b>S</b>. L'orientation du terrain est propre à chaque écran : elle ne change rien pour l'adversaire.</div>
+      </div>
+
+      <div>
+        <div class="side-section-title">Discussion</div>
+        <div id="chat-box"></div>
+        <div id="chat-quick">
+          <button data-msg="Bien joué !">👏</button>
+          <button data-msg="Aïe…">😅</button>
+          <button data-msg="À toi !">👉</button>
+          <button data-msg="On refait une manche ?">🔁</button>
+          <button data-msg="Salut !">👋</button>
+        </div>
+        <div id="chat-form">
+          <input type="text" id="chat-input" maxlength="120" placeholder="Message…">
+          <button class="btn" id="chat-send">➤</button>
+        </div>
+      </div>
+
+    </div>
+
+    <div id="grid-area">
+      <div id="stage-wrap">
+        <canvas id="stage" class="stage" width="960" height="540"></canvas>
+        <div class="hud" id="hud">
+          <div class="hud-big" id="hud-big">🎮</div>
+          <div class="hud-sub" id="hud-sub"></div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- MODALE CONNEXION -->
+<div class="modal" id="net-modal">
+  <div class="modal-card">
+    <div class="modal-head">
+      <h2>🌐 Connexion des joueurs</h2>
+      <button class="modal-close" id="net-modal-close">✕</button>
+    </div>
+
+    <div id="net-step-choice">
+      <div class="field-row" style="margin-bottom:14px;">
+        <label for="inp-nick">Mon pseudo</label>
+        <input type="text" id="inp-nick" maxlength="14" value="Joueur 1" style="width:200px">
+      </div>
+      <div class="choice-grid">
+        <button class="choice" id="ch-host">
+          <span class="ch-ico">🎬</span>
+          <span><span class="ch-tit">Créer une partie</span><br><span class="ch-sub">Vous obtenez un code à partager. Vous êtes la raquette GAUCHE et arbitrez la balle.</span></span>
+        </button>
+        <button class="choice" id="ch-join">
+          <span class="ch-ico">🔑</span>
+          <span><span class="ch-tit">Rejoindre une partie</span><br><span class="ch-sub">Saisissez le code reçu. Vous êtes la raquette DROITE.</span></span>
+        </button>
+        <button class="choice" id="ch-local">
+          <span class="ch-ico">🪑</span>
+          <span><span class="ch-tit">Jouer en local</span><br><span class="ch-sub">Les deux raquettes sur le même écran : W / S à gauche, ↑ / ↓ à droite.</span></span>
+        </button>
+      </div>
+      <p style="margin-top:12px;">La connexion est <strong>directe entre les deux navigateurs</strong> (WebRTC / PeerJS) : aucune donnée de partie ne transite par un serveur, seul l'annuaire public PeerJS sert à la mise en relation.</p>
+    </div>
+
+    <div id="net-step-file" style="display:none;">
+      <div class="note">📁 Ce jeu a été ouvert <strong>directement depuis un fichier</strong> (<code>file://</code>).
+        La partie en ligne fonctionne dans ce mode, mais avec quatre contraintes.</div>
+      <ul class="constraints">
+        <li>Votre adversaire doit posséder <strong>le même fichier de jeu sur son propre poste</strong> :
+          rien n'est téléchargé depuis Internet, chacun ouvre sa copie.</li>
+        <li>Le <strong>lien d'invitation ne servira à rien</strong> : il désigne un emplacement sur votre
+          disque. Transmettez uniquement le <strong>code à 5 caractères</strong>.</li>
+        <li>Les <strong>records et le réglage du son</strong> peuvent ne pas être conservés d'une fois sur l'autre.</li>
+        <li><strong>Safari</strong> refuse parfois la connexion dans ce mode ; Chrome, Edge et Firefox l'acceptent.</li>
+      </ul>
+      <p>Pour s'affranchir de tout cela : publiez le dossier (GitHub Pages, Netlify…) ou lancez un serveur
+        local, puis rejoignez-vous par une adresse <code>https://…</code>.</p>
+      <div class="overlay-buttons">
+        <button class="btn primary" id="file-ok">✅ J'ai compris, continuer</button>
+        <button class="btn" id="file-cancel">↩ Annuler</button>
+      </div>
+    </div>
+
+    <div id="net-step-host" style="display:none;">
+      <p>Transmettez ce code (ou le lien) à votre adversaire :</p>
+      <div class="big-code" id="host-code">·····</div>
+      <div class="share-link">
+        <input type="text" id="host-link" readonly>
+        <button class="btn btn-net" id="btn-copy-link2">🔗 Copier</button>
+      </div>
+      <div class="note blue" id="host-status">⏳ En attente de connexion de l'adversaire…</div>
+      <div class="overlay-buttons">
+        <button class="btn" id="host-back">↩ Retour</button>
+      </div>
+    </div>
+
+    <div id="net-step-join" style="display:none;">
+      <p>Saisissez le code communiqué par l'hôte :</p>
+      <div style="display:flex;justify-content:center;">
+        <input type="text" id="join-code" class="code-input" maxlength="5" placeholder="ABCDE">
+      </div>
+      <div class="note blue" id="join-status" style="display:none;"></div>
+      <div class="overlay-buttons">
+        <button class="btn primary" id="btn-do-join">🔌 Se connecter</button>
+        <button class="btn" id="join-back">↩ Retour</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- MODALE AIDE -->
+<div class="modal" id="aide-modal">
+  <div class="modal-card">
+    <div class="modal-head">
+      <h2>🎮 Comment jouer — Tennis</h2>
+      <button class="modal-close" id="btn-aide-close">✕</button>
+    </div>
+    <ol class="help">
+      <li><strong>But :</strong> renvoyer la balle avec sa raquette. Le premier à <strong>10 points</strong> gagne la partie.</li>
+      <li><strong>Commandes :</strong> la raquette suit la <strong>souris</strong> ou le <strong>doigt</strong> ; les flèches fonctionnent aussi.</li>
+      <li><strong>Orientation du terrain :</strong> la liste <em>Ma raquette</em> place votre raquette <strong>à gauche, à droite, en bas ou en haut</strong> de votre écran ; le terrain bascule en portrait pour les deux positions verticales. Ce choix est <strong>purement local</strong> : la partie se déroule toujours dans le même repère, seuls l'affichage et la saisie tournent, si bien que chacun peut voir le terrain à sa façon sans le moindre risque de désaccord entre les deux postes.</li>
+      <li><strong>Format du terrain :</strong> en vue verticale, un terrain 16:9 se réduit à un couloir étroit. Le format <strong>compact</strong> raccourcit le terrain et élargit nettement l'aire de jeu à l'écran. Ce réglage-là, contrairement à l'orientation, <strong>concerne les deux joueurs</strong> : c'est celui de l'hôte qui s'applique, transmis au coup d'envoi.</li>
+      <li><strong>Mode entraînement :</strong> un seul joueur ; la raquette d'en face est tenue par la machine, qui suit la balle à vitesse limitée et revient au centre entre deux échanges. Même objectif : dix points.</li>
+      <li>L'<strong>hôte</strong> est la raquette gauche, l'<strong>invité</strong> la raquette droite. La balle rebondit en haut et en bas ; l'angle de renvoi dépend du point d'impact sur la raquette — un bord donne un angle raide.</li>
+      <li>La balle accélère légèrement à chaque échange. Une balle qui dépasse un bord latéral donne un point à l'adversaire, et le service repart du centre vers celui qui vient d'encaisser.</li>
+      <li><strong>Sous le capot :</strong> l'hôte est le seul arbitre — il simule la balle et diffuse sa position environ 30 fois par seconde. L'invité envoie uniquement la hauteur de sa raquette et affiche la balle reçue, lissée pour absorber la latence : aucune divergence n'est possible.</li>
+      <li><strong>Inactivité :</strong> au bout de dix secondes sans nouvelle de l'adversaire, un message d'attente s'affiche. <strong>Déconnexion :</strong> la partie s'arrête et le score est conservé.</li>
+      <li><strong>Mode local :</strong> les deux raquettes sur le même écran, W / S à gauche et ↑ / ↓ à droite.</li>
+    </ol>
+    <p style="font-size:.85rem;line-height:1.6;color:#1e293b;margin-top:2px;"><strong>Boutons communs du bandeau :</strong>
+      <b>📜 Historique</b> ouvre le relevé de la partie, que l'on peut imprimer ; il est aussi accessible depuis la fenêtre
+      de fin de manche. <b>🔊 Son</b> coupe ou rétablit les effets sonores, et le choix est mémorisé.
+      <b>⛶ Plein écran</b> agrandit le jeu à tout l’écran, ce qui écarte les info-bulles de la barre des tâches ; rien n’est modifié durablement, la touche Échap ou le même bouton rétablissent la fenêtre.
+      <b>⟲ Réinitialiser</b> arrête la partie en cours sans quitter la page. <b>✕ Quitter</b> revient au menu.</p>
+    <div class="note blue">🌐 Le jeu en ligne fonctionne aussi <strong>par simple double-clic</strong> (<em>file://</em>) : le jeu demande alors votre accord et rappelle les contraintes — chacun doit avoir le même fichier de jeu, et seul le code à 5 caractères circule. Servir la page en <strong>HTTPS</strong> (GitHub Pages, Netlify, Vercel…) lève ces limites et permet d'envoyer un simple lien d'invitation.</div>
+    <button class="btn primary" id="btn-aide-ok" style="align-self:center;">OK</button>
+  </div>
+</div>
+
+<!-- MODALE HISTORIQUE -->
+<div class="modal" id="hist-modal">
+  <div class="modal-card">
+    <div class="modal-head">
+      <h2>📜 Historique — Points marqués</h2>
+      <button class="modal-close" id="hist-close">✕</button>
+    </div>
+    <div id="hist-players"></div>
+    <div id="history-list"></div>
+    <div id="hist-empty">Aucun coup enregistré pour l'instant.</div>
+    <div class="overlay-buttons">
+      <button class="btn btn-net" id="hist-print">🖨 Imprimer</button>
+      <button class="btn primary" id="hist-ok">Fermer</button>
+    </div>
+  </div>
+</div>
+
+<!-- OVERLAY FIN DE MANCHE -->
+<div class="modal" id="overlay">
+  <div class="modal-card" id="ov-card">
+    <h2 id="ov-title">🎉 Victoire !</h2>
+    <div class="overlay-stats" id="ov-stats"></div>
+    <span id="ov-wait">⏳ En attente de l'hôte pour la manche suivante…</span>
+    <div class="overlay-buttons">
+      <button class="btn primary" id="ov-next">▶ Manche suivante</button>
+      <button class="btn" id="ov-hist">📜 Historique de la manche</button>
+      <button class="btn btn-net" id="ov-ask">🙋 Demander une revanche</button>
+      <button class="btn" id="ov-close">👁 Revenir à l'écran</button>
+    </div>
+  </div>
+</div>
+
+<script src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js"></script>
+<script>
+(function () {
+  "use strict";
+
+  /* ══════════════════════════════════════════════════════════════════════
+     NOYAU COMMUN — réseau P2P (PeerJS), discussion, bandeaux, modales
+     Identique dans les quatre jeux : seule la partie « MODULE DE JEU »
+     change d'un fichier à l'autre.
+     ══════════════════════════════════════════════════════════════════════ */
+
+  /* ── Chargement de PeerJS, avec CDN de secours ── */
+  const CDNS = [
+    "https://cdnjs.cloudflare.com/ajax/libs/peerjs/1.5.4/peerjs.min.js",
+    "https://cdn.jsdelivr.net/npm/peerjs@1.5.4/dist/peerjs.min.js"
+  ];
+  function ensurePeer() {
+    if (window.Peer) return Promise.resolve(true);
+    return CDNS.reduce((chain, url) => chain.then((ok) => ok ? true : new Promise((res) => {
+      const s = document.createElement("script");
+      s.src = url;
+      s.onload = () => res(!!window.Peer);
+      s.onerror = () => res(false);
+      document.head.appendChild(s);
+    })), Promise.resolve(false));
+  }
+
+  /* ── Utilitaires ── */
+  const $ = (id) => document.getElementById(id);
+  const ALPHA = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";   // sans I, O, 0, 1 (ambigus)
+  const pad2 = (x) => String(x).padStart(2, "0");
+  const fmtTime = (ms) => { const s = Math.floor(ms / 1000); return pad2(Math.floor(s / 60)) + ":" + pad2(s % 60); };
+  function makeCode() { let s = ""; for (let i = 0; i < 5; i++) s += ALPHA[Math.floor(Math.random() * ALPHA.length)]; return s; }
+  function escapeHtml(s) { return String(s).replace(/[&<>"']/g, (m) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[m])); }
+  function clamp(v, a, b) { return v < a ? a : (v > b ? b : v); }
+
+  /* ── Générateur pseudo-aléatoire déterministe (mulberry32) ──
+     Contrat : même graine ⇒ même séquence, sur toutes les machines. */
+  function mulberry32(a) {
+    a = a >>> 0;
+    return function () {
+      a |= 0; a = (a + 0x6D2B79F5) | 0;
+      let t = Math.imul(a ^ (a >>> 15), 1 | a);
+      t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+      return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+    };
+  }
+
+
+  /* ══════════ SON (synthèse WebAudio, aucun fichier externe) ══════════ */
+  const SND = { on: true, ctx: null };
+  try { SND.on = localStorage.getItem("jeux2.sound") !== "0"; } catch (e) {}
+  function actx() {
+    if (!SND.ctx) { try { SND.ctx = new (window.AudioContext || window.webkitAudioContext)(); } catch (e) { SND.ctx = null; } }
+    return SND.ctx;
+  }
+  function tone(f, dur, type, gain, delay) {
+    const c = actx(); if (!c) return;
+    if (c.state === "suspended") { try { c.resume(); } catch (e) {} }
+    const t0 = c.currentTime + (delay || 0), d = dur || 0.12;
+    const o = c.createOscillator(), g = c.createGain();
+    o.type = type || "triangle";
+    o.frequency.setValueAtTime(f, t0);
+    g.gain.setValueAtTime(0.0001, t0);
+    g.gain.exponentialRampToValueAtTime(gain || 0.16, t0 + 0.012);
+    g.gain.exponentialRampToValueAtTime(0.0001, t0 + d);
+    o.connect(g); g.connect(c.destination);
+    o.start(t0); o.stop(t0 + d + 0.03);
+  }
+  function snd(name) {
+    if (!SND.on) return;
+    switch (name) {
+      case "click":   tone(520, .07, "square", .11); break;
+      case "drop":    tone(760, .06, "sine", .09); break;
+      case "capture": tone(660, .09, "triangle", .15); tone(880, .10, "triangle", .15, .08); tone(1180, .14, "triangle", .13, .16); break;
+      case "error":   tone(180, .16, "sawtooth", .11); break;
+      case "flap":    tone(620, .06, "square", .09); break;
+      case "pass":    tone(960, .06, "sine", .09); break;
+      case "jump":    tone(500, .08, "square", .09); break;
+      case "point":   tone(880, .10, "square", .13); tone(1240, .12, "square", .11, .09); break;
+      case "bounce":  tone(420, .05, "square", .09); break;
+      case "crash":   tone(300, .18, "sawtooth", .16); tone(140, .30, "sawtooth", .14, .10); break;
+      case "count":   tone(700, .10, "sine", .11); break;
+      case "go":      tone(1000, .18, "sine", .15); break;
+      case "win":     [523, 659, 784, 1047].forEach((f, i) => tone(f, .18, "triangle", .15, i * .11)); break;
+      case "lose":    [523, 415, 330, 262].forEach((f, i) => tone(f, .20, "triangle", .13, i * .12)); break;
+      case "join":    tone(660, .10, "sine", .13); tone(990, .12, "sine", .11, .10); break;
+    }
+  }
+  function toggleSound() {
+    SND.on = !SND.on;
+    try { localStorage.setItem("jeux2.sound", SND.on ? "1" : "0"); } catch (e) {}
+    renderSound();
+    if (SND.on) snd("click");
+  }
+  function renderSound() {
+    const b = $("btn-sound"); if (!b) return;
+    b.textContent = SND.on ? "🔊 Son" : "🔇 Muet";
+    b.classList.toggle("danger", !SND.on);
+  }
+
+  /* ── État partagé ── */
+  const S = { names: ["Joueur 1", "Joueur 2"], scores: [0, 0], rounds: 0, draws: 0, elapsed: 0, t0: 0 };
+  const NET = {
+    mode: "local",            // 'local' | 'host' | 'guest'
+    peer: null, conn: null, code: null,
+    connected: false, myRole: 1, ping: null, pingTimer: null
+  };
+  const GAME = {};            // rempli par le module de jeu
+
+  /* ── Message de validation (bandeau) ── */
+  function msg(text, info) {
+    const el = $("val-msg");
+    if (!text) { el.classList.remove("visible"); return; }
+    el.textContent = (info ? "ℹ " : "⚠ ") + text;
+    el.classList.toggle("info", !!info);
+    el.classList.add("visible");
+    clearTimeout(msg._t);
+    msg._t = setTimeout(() => el.classList.remove("visible"), 5000);
+  }
+  function setStat(id, v) { const e = $(id); if (e) e.textContent = v; }
+  /* Gains en cours de manche, affichés sous le nom de chaque joueur */
+  function setGain(p, txt) {
+    const e = $("pc-gain-" + p); if (!e) return;
+    e.textContent = txt || "";
+    e.style.display = txt ? "block" : "none";
+  }
+
+  /* ── Chronomètre ── */
+  let timerId = null;
+  function startTimer() {
+    stopTimer();
+    S.t0 = Date.now() - S.elapsed;
+    timerId = setInterval(() => { S.elapsed = Date.now() - S.t0; setStat("st-time", fmtTime(S.elapsed)); }, 250);
+  }
+  function stopTimer() { if (timerId) { clearInterval(timerId); timerId = null; } }
+  function resetTimer() { stopTimer(); S.elapsed = 0; setStat("st-time", "00:00"); }
+
+  /* ── Discussion ── */
+  function addChat(who, text, sys) {
+    const box = $("chat-box");
+    const d = document.createElement("div");
+    d.className = "chat-msg" + (sys ? " sys" : "");
+    d.innerHTML = sys ? text : "<b>" + escapeHtml(who) + "</b> " + escapeHtml(text);
+    box.appendChild(d);
+    box.scrollTop = box.scrollHeight;
+    while (box.children.length > 60) box.removeChild(box.firstChild);
+  }
+  function sendChat(text) {
+    text = (text || "").trim();
+    if (!text) return;
+    if (NET.mode === "local" || !NET.connected) { msg("La discussion nécessite une partie en ligne connectée."); return; }
+    addChat(S.names[NET.myRole - 1] + " (vous)", text);
+    send({ t: "chat", text: text });
+  }
+
+  /* ── Historique ── */
+  function addHist(num, label, right) {
+    const list = $("history-list"); if (!list) return;
+    const d = document.createElement("div");
+    d.className = "hist-item";
+    d.innerHTML = '<span class="hi-num">' + num + '</span><span>' + label + '</span><span class="hi-pos">' + (right || "") + '</span>';
+    list.appendChild(d);
+    list.scrollTop = list.scrollHeight;
+    while (list.children.length > 80) list.removeChild(list.firstChild);
+  }
+  function clearHist() { const l = $("history-list"); if (l) l.innerHTML = ""; }
+
+  function openHist() {
+    const list = $("history-list");
+    const solo = !!(GAME.solo && GAME.solo());
+    $("hist-players").textContent = solo
+      ? S.names[0] + " — partie solo"
+      : "🔵 " + S.names[0] + "  contre  🔴 " + S.names[1];
+    $("hist-empty").style.display = list.children.length ? "none" : "block";
+    $("hist-modal").classList.add("show");
+  }
+  function closeHist() { $("hist-modal").classList.remove("show"); }
+  function printHistory() {
+    const rows = Array.from(document.querySelectorAll("#history-list .hist-item")).map((el) => {
+      const c = el.children;
+      return "<tr>" + Array.from(c).map((s) => "<td>" + escapeHtml(s.textContent) + "</td>").join("") + "</tr>";
+    }).join("");
+    const titre = document.title.split("—")[0].trim();
+    const w = window.open("", "_blank", "width=720,height=820");
+    if (!w) { msg("Le navigateur a bloqué la fenêtre d'impression."); return; }
+    w.document.write('<!DOCTYPE html><html lang="fr"><head><meta charset="utf-8"><title>Historique — ' + titre +
+      '</title><style>body{font-family:Segoe UI,Arial,sans-serif;color:#06283d;padding:26px}' +
+      'h1{font-size:1.25rem;margin:0 0 4px}p{font-size:.85rem;color:#0a5b80;margin:0 0 14px}' +
+      'table{border-collapse:collapse;width:100%;font-size:.85rem}' +
+      'td,th{border:1px solid #7dd3f0;padding:5px 9px;text-align:left}th{background:#e0f6ff}</style></head><body>' +
+      "<h1>" + titre + " — historique de la partie</h1><p>" +
+      escapeHtml($("hist-players").textContent) + " — " + new Date().toLocaleString("fr-FR") +
+      "</p><table>" + (rows || "<tr><td>Aucun coup enregistré.</td></tr>") + "</table></body></html>");
+    w.document.close(); w.focus();
+    setTimeout(() => { try { w.print(); } catch (e) {} }, 350);
+  }
+
+
+  /* ── Envoi réseau ── */
+  function send(obj) { try { if (NET.conn && NET.conn.open) NET.conn.send(obj); } catch (e) { /* ignore */ } }
+
+  /* ── Rendus communs ── */
+  function renderPlayers() {
+    $("pc-name-1").textContent = S.names[0] + (NET.mode !== "local" && NET.myRole === 1 ? " (vous)" : "");
+    $("pc-name-2").textContent = S.names[1] + (NET.mode !== "local" && NET.myRole === 2 ? " (vous)" : "");
+    $("pc-sub-1").textContent = NET.mode === "local" ? "Local" : "Hôte";
+    $("pc-sub-2").textContent = NET.mode === "local" ? "Local" : (NET.connected ? "Invité — connecté" : "Invité — hors ligne");
+    $("pc-score-1").textContent = S.scores[0];
+    $("pc-score-2").textContent = S.scores[1];
+    const d = $("sc-draws"), r = $("sc-rounds");
+    if (d) d.textContent = S.draws;
+    if (r) r.textContent = S.rounds;
+    const isGuest = NET.mode === "guest";
+    const solo = !!(GAME.solo && GAME.solo());
+    $("btn-start").disabled = !solo && (isGuest || (NET.mode === "host" && !NET.connected));
+    $("chat-input").disabled = NET.mode === "local";
+    $("chat-send").disabled = NET.mode === "local";
+  }
+  function renderNet() {
+    const dot = $("net-dot"), txt = $("net-text");
+    dot.className = "dot";
+    $("net-code-wrap").style.display = NET.mode === "local" ? "none" : "inline";
+    $("btn-copy-link").style.display = NET.mode === "host" ? "inline-flex" : "none";
+    $("net-code").textContent = NET.code || "-----";
+    if (NET.mode === "local") {
+      txt.textContent = "Mode local — les deux joueurs jouent sur cet écran";
+    } else if (NET.connected) {
+      dot.classList.add("on");
+      txt.textContent = (NET.mode === "host" ? "Hôte" : "Invité") + " — connecté à " + S.names[NET.myRole === 1 ? 1 : 0];
+    } else {
+      dot.classList.add(NET.mode === "host" ? "wait" : "off");
+      txt.textContent = NET.mode === "host" ? "En attente de connexion de l'adversaire…" : "Déconnecté de l'hôte";
+    }
+    $("net-ping").textContent = NET.connected && NET.ping != null ? "latence " + NET.ping + " ms" : "";
+  }
+  function renderCommon() { renderPlayers(); renderNet(); if (GAME.render) GAME.render(); }
+
+  /* ── Overlay de fin de manche ── */
+  function showOverlay(o) {
+    $("ov-title").textContent = o.title || "";
+    $("ov-title").className = o.cls || "";
+    const st = $("ov-stats");
+    st.innerHTML = (o.stats || []).map((s) =>
+      '<div class="ov-stat"><span class="ov-stat-val">' + s[0] + '</span><span class="ov-stat-lbl">' + s[1] + '</span></div>').join("");
+    st.style.display = (o.stats && o.stats.length) ? "flex" : "none";
+    const guest = NET.mode === "guest" && !(GAME.solo && GAME.solo());
+    $("ov-wait").style.display = guest ? "block" : "none";
+    $("ov-next").style.display = guest ? "none" : "inline-flex";
+    $("ov-next").textContent = o.nextLabel || "▶ Manche suivante";
+    $("ov-ask").style.display = guest && NET.connected ? "inline-flex" : "none";
+    $("overlay").classList.add("show");
+  }
+  function hideOverlay() { $("overlay").classList.remove("show"); }
+
+  /* ── Réception des messages ── */
+  function handleData(d) {
+    if (!d || typeof d !== "object") return;
+    switch (d.t) {
+      case "join":                                    // hôte : l'invité se présente
+        S.names[1] = (d.name || "Joueur 2").slice(0, 14);
+        NET.connected = true;
+        addChat("", "🔌 <b>" + escapeHtml(S.names[1]) + "</b> a rejoint la partie.", true);
+        snd("join");
+        send({ t: "welcome", names: S.names });
+        renderCommon();
+        if (GAME.onConnected) GAME.onConnected();
+        msg(S.names[1] + " a rejoint la partie. Vous pouvez lancer la manche !", true);
+        break;
+      case "welcome":                                 // invité : accueil de l'hôte
+        S.names = d.names; NET.myRole = 2; NET.connected = true;
+        $("inp-me").value = S.names[1];
+        addChat("", "🔌 Connecté à <b>" + escapeHtml(S.names[0]) + "</b>.", true);
+        snd("join");
+        renderCommon();
+        if (GAME.onConnected) GAME.onConnected();
+        break;
+      case "chat":
+        addChat(S.names[NET.myRole === 1 ? 1 : 0], d.text);
+        break;
+      case "rematch":
+        msg(S.names[1] + " demande une nouvelle manche.", true);
+        addChat("", "🔁 <b>" + escapeHtml(S.names[1]) + "</b> demande une revanche.", true);
+        break;
+      case "ping": send({ t: "pong", ts: d.ts }); break;
+      case "pong": NET.ping = Date.now() - d.ts; renderNet(); break;
+      case "bye":
+        NET.connected = false;
+        addChat("", "👋 L'adversaire a quitté la partie.", true);
+        if (GAME.onDisconnected) GAME.onDisconnected();
+        renderCommon();
+        break;
+      default:
+        if (GAME.onData) GAME.onData(d);
+    }
+  }
+
+  function wireConn(conn) {
+    NET.conn = conn;
+    conn.on("data", handleData);
+    conn.on("close", () => {
+      NET.connected = false; NET.ping = null;
+      addChat("", "⚠️ Connexion interrompue.", true);
+      msg("Connexion avec l'adversaire interrompue.");
+      if (GAME.onDisconnected) GAME.onDisconnected();
+      renderCommon();
+    });
+    conn.on("error", () => { msg("Erreur de connexion P2P."); });
+    if (NET.pingTimer) clearInterval(NET.pingTimer);
+    NET.pingTimer = setInterval(() => { if (NET.connected) send({ t: "ping", ts: Date.now() }); }, 4000);
+  }
+
+  /* ── Hôte ── */
+  function hostGame() {
+    ensurePeer().then((ok) => {
+      if (!ok) { $("host-status").textContent = "❌ Impossible de charger PeerJS (vérifiez votre connexion Internet)."; return; }
+      cleanupPeer();
+      NET.mode = "host"; NET.myRole = 1; NET.connected = false;
+      NET.code = makeCode();
+      S.names[0] = ($("inp-nick").value || "Joueur 1").trim().slice(0, 14) || "Joueur 1";
+      S.names[1] = "Joueur 2";
+      $("inp-me").value = S.names[0];
+
+      $("net-step-choice").style.display = "none";
+      $("net-step-host").style.display = "block";
+      $("host-code").textContent = NET.code;
+      $("host-link").value = shareLink(NET.code);
+      $("host-status").textContent = "⏳ Création de la salle…";
+
+      NET.peer = new Peer(GAME.prefix + NET.code.toLowerCase(), { debug: 1 });
+      NET.peer.on("open", () => { $("host-status").textContent = "⏳ En attente de connexion de l'adversaire…"; renderCommon(); });
+      NET.peer.on("connection", (conn) => {
+        if (NET.conn && NET.conn.open) { conn.close(); return; }      // un seul adversaire
+        wireConn(conn);
+        conn.on("open", () => {
+          $("host-status").textContent = "✅ Adversaire connecté !";
+          setTimeout(() => $("net-modal").classList.remove("show"), 900);
+        });
+      });
+      NET.peer.on("error", (err) => {
+        if (err && err.type === "unavailable-id") {
+          $("host-status").textContent = "Code déjà utilisé, nouveau code en cours…";
+          setTimeout(hostGame, 300);
+        } else {
+          $("host-status").textContent = "❌ Erreur réseau : " + (err && err.type ? err.type : "inconnue");
+        }
+      });
+      if (GAME.onModeChange) GAME.onModeChange();
+      renderCommon();
+    });
+  }
+
+  /* ── Invité ── */
+  function joinGame(code) {
+    code = (code || "").trim().toUpperCase();
+    if (code.length !== 5) { showJoinStatus("❌ Le code doit comporter 5 caractères."); return; }
+    ensurePeer().then((ok) => {
+      if (!ok) { showJoinStatus("❌ Impossible de charger PeerJS (vérifiez votre connexion Internet)."); return; }
+      cleanupPeer();
+      NET.mode = "guest"; NET.myRole = 2; NET.connected = false; NET.code = code;
+      S.names[1] = ($("inp-nick").value || "Joueur 2").trim().slice(0, 14) || "Joueur 2";
+      $("inp-me").value = S.names[1];
+      showJoinStatus("⏳ Connexion à la salle " + code + "…");
+
+      NET.peer = new Peer({ debug: 1 });
+      NET.peer.on("open", () => {
+        const conn = NET.peer.connect(GAME.prefix + code.toLowerCase(), { reliable: true });
+        wireConn(conn);
+        conn.on("open", () => {
+          send({ t: "join", name: S.names[1] });
+          showJoinStatus("✅ Connecté ! La partie est pilotée par l'hôte.");
+          setTimeout(() => $("net-modal").classList.remove("show"), 900);
+          renderCommon();
+        });
+        conn.on("error", () => showJoinStatus("❌ Connexion impossible. Vérifiez le code."));
+        setTimeout(() => { if (!NET.connected) showJoinStatus("❌ Aucune réponse : code invalide ou hôte hors ligne."); }, 12000);
+      });
+      NET.peer.on("error", (err) => {
+        const type = err && err.type ? err.type : "inconnue";
+        showJoinStatus(type === "peer-unavailable" ? "❌ Salle introuvable : vérifiez le code." : "❌ Erreur réseau : " + type);
+      });
+      if (GAME.onModeChange) GAME.onModeChange();
+      renderCommon();
+    });
+  }
+  function showJoinStatus(t) { const el = $("join-status"); el.style.display = "block"; el.textContent = t; }
+
+  /* ── Local ── */
+  function goLocal() {
+    cleanupPeer();
+    NET.mode = "local"; NET.myRole = 1; NET.connected = false; NET.code = null; NET.ping = null;
+    S.names = [($("inp-nick").value || "Joueur 1").trim().slice(0, 14) || "Joueur 1", "Joueur 2"];
+    $("inp-me").value = S.names[0];
+    $("net-modal").classList.remove("show");
+    if (GAME.onModeChange) GAME.onModeChange();
+    renderCommon();
+  }
+
+  function cleanupPeer() {
+    if (NET.pingTimer) { clearInterval(NET.pingTimer); NET.pingTimer = null; }
+    try { if (NET.conn && NET.conn.open) { send({ t: "bye" }); NET.conn.close(); } } catch (e) {}
+    try { if (NET.peer) NET.peer.destroy(); } catch (e) {}
+    NET.conn = null; NET.peer = null; NET.connected = false; NET.ping = null;
+  }
+  window.addEventListener("beforeunload", cleanupPeer);
+
+  function shareLink(code) { return location.origin + location.pathname + "?room=" + code; }
+  function copy(text, okMsg) {
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(text).then(() => msg(okMsg, true), () => msg("Copie impossible : sélectionnez le texte manuellement."));
+    } else msg("Copie impossible : sélectionnez le texte manuellement.");
+  }
+
+  /* ── Câblage des événements communs ── */
+  function wireCore() {
+    $("btn-start").addEventListener("click", () => {
+      if (NET.mode === "guest") { msg("Seul l'hôte peut lancer une manche."); return; }
+      if (NET.mode === "host" && !NET.connected) { msg("Attendez la connexion de votre adversaire."); return; }
+      hideOverlay();
+      if (GAME.onStart) GAME.onStart();
+    });
+    $("btn-reset").addEventListener("click", () => { if (GAME.onQuit) GAME.onQuit(); snd("click"); });
+    $("btn-quit").addEventListener("click", () => { cleanupPeer(); location.href = "index.html"; });
+    $("btn-sound").addEventListener("click", toggleSound);
+    $("btn-hist").addEventListener("click", openHist);
+    $("hist-close").addEventListener("click", closeHist);
+    $("hist-ok").addEventListener("click", closeHist);
+    $("hist-print").addEventListener("click", printHistory);
+    $("ov-hist").addEventListener("click", openHist);
+
+    $("btn-connect").addEventListener("click", () => {
+      $("net-step-choice").style.display = "block";
+      $("net-step-host").style.display = "none";
+      $("net-step-join").style.display = "none";
+      $("join-status").style.display = "none";
+      $("net-modal").classList.add("show");
+    });
+    $("net-modal-close").addEventListener("click", () => $("net-modal").classList.remove("show"));
+    $("ch-host").addEventListener("click", hostGame);
+    $("ch-join").addEventListener("click", () => {
+      $("net-step-choice").style.display = "none";
+      $("net-step-join").style.display = "block";
+      $("join-code").focus();
+    });
+    $("ch-local").addEventListener("click", goLocal);
+    $("host-back").addEventListener("click", () => { cleanupPeer(); NET.mode = "local"; NET.code = null; $("net-step-host").style.display = "none"; $("net-step-choice").style.display = "block"; renderCommon(); });
+    $("join-back").addEventListener("click", () => { cleanupPeer(); NET.mode = "local"; NET.code = null; $("net-step-join").style.display = "none"; $("net-step-choice").style.display = "block"; renderCommon(); });
+    $("btn-do-join").addEventListener("click", () => joinGame($("join-code").value));
+    $("join-code").addEventListener("keydown", (e) => { if (e.key === "Enter") joinGame($("join-code").value); });
+    $("join-code").addEventListener("input", (e) => { e.target.value = e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, ""); });
+    $("btn-copy-link").addEventListener("click", () => copy(shareLink(NET.code), "Lien d'invitation copié."));
+    $("btn-copy-link2").addEventListener("click", () => copy($("host-link").value, "Lien d'invitation copié."));
+
+    $("btn-aide-toggle").addEventListener("click", () => $("aide-modal").classList.add("show"));
+    $("btn-aide-close").addEventListener("click", () => $("aide-modal").classList.remove("show"));
+    $("btn-aide-ok").addEventListener("click", () => $("aide-modal").classList.remove("show"));
+
+    $("ov-next").addEventListener("click", () => { hideOverlay(); if (NET.mode !== "guest" && GAME.onNext) GAME.onNext(); });
+    $("ov-ask").addEventListener("click", () => { send({ t: "rematch" }); msg("Demande de revanche envoyée à l'hôte.", true); });
+    $("ov-close").addEventListener("click", hideOverlay);
+
+    $("chat-send").addEventListener("click", () => { sendChat($("chat-input").value); $("chat-input").value = ""; });
+    $("chat-input").addEventListener("keydown", (e) => { e.stopPropagation(); if (e.key === "Enter") { sendChat($("chat-input").value); $("chat-input").value = ""; } });
+    document.querySelectorAll("#chat-quick button").forEach((b) => b.addEventListener("click", () => sendChat(b.dataset.msg)));
+
+    $("inp-me").addEventListener("input", () => {
+      const v = ($("inp-me").value || "Joueur").slice(0, 14);
+      if (NET.mode === "guest") S.names[1] = v; else S.names[0] = v;
+      $("inp-nick").value = v;
+      if (NET.mode === "host" && NET.connected) send({ t: "welcome", names: S.names });
+      if (NET.mode === "guest" && NET.connected) send({ t: "chat", text: "(je me renomme « " + v + " »)" });
+      renderCommon();
+    });
+
+    document.addEventListener("keydown", (e) => {
+      if (e.key === "Escape") document.querySelectorAll(".modal.show").forEach((m) => m.classList.remove("show"));
+    });
+
+
+    /* ── Menu contextuel du navigateur ──
+       Un clic droit sur le plateau ou la scène ouvrait le menu « Ouvrir dans un
+       nouvel onglet / Enregistrer l'image… », gênant en cours de partie. On le
+       neutralise partout, SAUF là où il reste utile : champs de saisie (copier,
+       coller), code de la salle, lien d'invitation, messages et historique. */
+    document.addEventListener("contextmenu", function (e) {
+      var t = e.target;
+      if (t && t.closest && t.closest("input, textarea, .code-pill, .big-code, .chat-msg, #hist-modal, #history-list")) return;
+      e.preventDefault();
+    });
+
+
+    /* ── Ouverture depuis un fichier : autorisation explicite ──
+       En file://, la mise en relation fonctionne (le schéma « file » est
+       réputé digne de confiance), mais les contraintes ne sont pas les
+       mêmes qu'en ligne. On les expose et on demande l'accord avant de
+       créer ou de rejoindre une partie. */
+    var FILEMODE = location.protocol === "file:";
+    var fileOk = false, filePending = null;
+    document.addEventListener("click", function (e) {
+      if (!FILEMODE || fileOk) return;
+      var b = e.target && e.target.closest ? e.target.closest("#ch-host, #ch-join") : null;
+      if (!b) return;
+      e.preventDefault(); e.stopPropagation();
+      filePending = b.id;
+      $("net-step-choice").style.display = "none";
+      $("net-step-host").style.display = "none";
+      $("net-step-join").style.display = "none";
+      $("net-step-file").style.display = "block";
+    }, true);
+    $("file-ok").addEventListener("click", function () {
+      fileOk = true;
+      $("net-step-file").style.display = "none";
+      $("net-step-choice").style.display = "block";
+      var b = filePending ? $(filePending) : null;
+      if (b) b.click();
+    });
+    $("file-cancel").addEventListener("click", function () {
+      $("net-step-file").style.display = "none";
+      $("net-step-choice").style.display = "block";
+    });
+
+    /* ── Plein écran ──
+       Utile quand la fenêtre touche le bas de l'écran : les info-bulles de
+       la barre des tâches n'ont plus de raison d'apparaître. Rien n'est
+       modifié durablement : Échap ou le même bouton rétablissent tout. */
+    function fsOn() { return !!(document.fullscreenElement || document.webkitFullscreenElement); }
+    function renderFs() { var b = $("btn-full"); if (b) b.textContent = fsOn() ? "⛶ Fenêtre" : "⛶ Plein écran"; }
+    function toggleFs() {
+      try {
+        if (fsOn()) { (document.exitFullscreen || document.webkitExitFullscreen).call(document); }
+        else {
+          var e = document.documentElement;
+          (e.requestFullscreen || e.webkitRequestFullscreen).call(e);
+        }
+      } catch (err) { msg("Le plein écran a été refusé par le navigateur."); }
+    }
+    if ($("btn-full")) $("btn-full").addEventListener("click", toggleFs);
+    document.addEventListener("fullscreenchange", renderFs);
+    document.addEventListener("webkitfullscreenchange", renderFs);
+    renderFs();
+
+
+    /* Pseudo par défaut de l'invité : sans cela les deux joueurs
+       s'appellent « Joueur 1 » et l'affichage devient illisible. */
+    if ($("ch-join")) $("ch-join").addEventListener("click", function () {
+      var n = $("inp-nick");
+      if (n && (!n.value || n.value.trim() === "Joueur 1")) n.value = "Joueur 2";
+    });
+
+    /* ── En file://, le lien d'invitation ne mène nulle part : on le masque ── */
+    if (location.protocol === "file:") {
+      var stl = document.createElement("style");
+      stl.textContent = ".share-link{display:none !important} #btn-copy-link{display:none !important}";
+      document.head.appendChild(stl);
+      var note = document.createElement("div");
+      note.className = "note";
+      note.innerHTML = "📁 Ouvert depuis un fichier : le lien d'invitation ne mènerait nulle part, il est masqué. " +
+        "<strong>Transmettez le code ci-dessus</strong> — votre adversaire doit avoir le même fichier de jeu sur son poste.";
+      var hs = $("net-step-host");
+      if (hs && $("host-status")) hs.insertBefore(note, $("host-status"));
+    }
+
+    renderSound();
+
+    /* Invitation reçue par lien */
+    const room = new URLSearchParams(location.search).get("room");
+    $("net-modal").classList.add("show");
+    if (room) {
+      $("net-step-choice").style.display = "none";
+      $("net-step-join").style.display = "block";
+      $("join-code").value = room.toUpperCase().slice(0, 5);
+      $("inp-nick").value = "Joueur 2";
+      showJoinStatus("Invitation détectée : saisissez votre pseudo puis cliquez sur « Se connecter ».");
+    }
+  }
+
+
+  /* ══════════════════════════════════════════════════════════════════════
+     MODULE DE JEU — TENNIS (néon des années 80)
+     Une seule autorité : l'HÔTE simule la balle et diffuse sa position.
+     L'invité n'envoie que la hauteur de sa raquette et affiche la balle
+     reçue (interpolée) : aucune divergence possible.
+     L'orientation du terrain est PUREMENT LOCALE : la simulation reste dans
+     son repère canonique (hôte à gauche), seul l'affichage et la saisie
+     passent par une rotation. Chacun peut donc voir le terrain à sa guise
+     sans que les deux postes divergent d'un iota.
+     ══════════════════════════════════════════════════════════════════════ */
+  GAME.prefix = "tennis-p2p-";
+
+  const DT = 1 / 60;
+  const PADW = 0.018, PADH = 0.20, PADX = 0.035, BR = 0.016;
+  const V0 = 0.78, VMAX = 2.0, ACC = 1.045, TARGET = 10;
+
+  const cv = $("stage"), ctx = cv.getContext("2d");
+  const hud = $("hud"), hudBig = $("hud-big"), hudSub = $("hud-sub");
+
+  const P = {
+    state: "idle",              // idle | count | play | done
+    bx: 0.9, by: 0.5, vx: V0, vy: 0.2,
+    yL: 0.5, yR: 0.5,           // hauteurs de raquette (centre), en unités
+    shownL: 0.5, shownR: 0.5,   // versions lissées pour l'affichage
+    tbx: 0.9, tby: 0.5,         // cible d'interpolation (invité)
+    sl: 0, sr: 0,
+    acc: 0, last: 0, tick: 0, countEnd: 0,
+    flash: 0, trail: [], stars: [],
+    lastPos: 0, lastSend: 0, warned: false, lastCount: 0,
+    keys: {}
+  };
+
+  /* Longueur du terrain, exprimée en hauteurs de terrain. Elle doit être
+     IDENTIQUE sur les deux postes : l'hôte la transmet au coup d'envoi.
+     Le format compact rend la vue verticale bien plus large à l'écran. */
+  const COURTS = { wide: 16 / 9, compact: 1.20 };
+  let WW = COURTS.wide;
+  function worldW() { return WW; }
+  function courtChoice() { const s = $("sel-court"); return s ? s.value : "wide"; }
+  function myY() { return NET.mode === "guest" ? P.yR : P.yL; }
+
+  /* ── Réglages du bandeau ── */
+  function isSolo() { return $("sel-mode").value === "1"; }
+  GAME.solo = isSolo;
+  function myRole() { return (NET.mode === "guest") ? 2 : 1; }
+  /* rotation à appliquer pour que MA raquette soit du côté demandé */
+  function rot() {
+    const c = $("sel-view").value;
+    const m1 = { left: 0, right: 180, bottom: 90, top: 270 };
+    const m2 = { right: 0, left: 180, bottom: 270, top: 90 };
+    return (myRole() === 1 ? m1 : m2)[c];
+  }
+  function portrait() { return rot() % 180 !== 0; }
+  function SC() { return portrait() ? cv.width : cv.height; }
+  /* terrain → écran */
+  function T(x, y) {
+    const s = SC(), r = rot(), W = cv.width, H = cv.height;
+    if (r === 0)   return [x * s, y * s];
+    if (r === 180) return [W - x * s, H - y * s];
+    if (r === 90)  return [y * s, H - x * s];
+    return [W - y * s, x * s];
+  }
+  /* écran → hauteur de raquette */
+  function invY(px, py) {
+    const s = SC(), r = rot(), W = cv.width, H = cv.height;
+    if (r === 0)   return py / s;
+    if (r === 180) return (H - py) / s;
+    if (r === 90)  return px / s;
+    return (W - px) / s;
+  }
+  /* sens du clavier : « touche vers le haut/la gauche » → sens canonique */
+  function keySign() { const r = rot(); return (r === 0 || r === 90) ? -1 : 1; }
+
+  function initStars() {
+    const sr = mulberry32(20260909);
+    P.stars = [];
+    for (let i = 0; i < 120; i++) P.stars.push({ x: sr() * 2, y: sr(), r: 0.4 + sr() * 1.6, a: 0.18 + sr() * 0.55 });
+  }
+
+  /* ── Service ── */
+  function serve(towards) {
+    const ww = worldW();
+    P.bx = ww / 2; P.by = 0.5;
+    const ang = (Math.random() - 0.5) * 0.7;
+    P.vx = (towards === 1 ? -1 : 1) * V0 * Math.cos(ang);
+    P.vy = V0 * Math.sin(ang);
+    P.trail = [];
+  }
+
+  /* ── Simulation (hôte ou local uniquement) ── */
+  function step() {
+    const ww = worldW();
+    P.bx += P.vx * DT; P.by += P.vy * DT;
+
+    if (P.by < BR) { P.by = BR; P.vy = Math.abs(P.vy); }
+    if (P.by > 1 - BR) { P.by = 1 - BR; P.vy = -Math.abs(P.vy); }
+
+    /* raquette gauche */
+    if (P.vx < 0 && P.bx - BR < PADX + PADW && P.bx - BR > PADX - 0.05) {
+      if (Math.abs(P.by - P.yL) < PADH / 2 + BR) bounce(1);
+    }
+    /* raquette droite */
+    if (P.vx > 0 && P.bx + BR > ww - PADX - PADW && P.bx + BR < ww - PADX + 0.05) {
+      if (Math.abs(P.by - P.yR) < PADH / 2 + BR) bounce(2);
+    }
+
+    if (P.bx < -0.05) { point(2); return; }
+    if (P.bx > ww + 0.05) { point(1); return; }
+
+    if (isSolo()) {                       /* mur d'entraînement : raquette droite pilotée */
+      const target = P.vx > 0 ? P.by : 0.5;
+      const d = target - P.yR, mx = 0.70 * DT;
+      P.yR = clamp(P.yR + clamp(d, -mx, mx), PADH / 2, 1 - PADH / 2);
+    }
+
+    P.trail.push({ x: P.bx, y: P.by });
+    if (P.trail.length > 16) P.trail.shift();
+  }
+
+  function bounce(side) {
+    const ww = worldW();
+    const py = side === 1 ? P.yL : P.yR;
+    const rel = clamp((P.by - py) / (PADH / 2), -1, 1);
+    const sp = Math.min(Math.hypot(P.vx, P.vy) * ACC, VMAX);
+    const ang = rel * 0.95;                       // bord de raquette = angle raide
+    P.vx = (side === 1 ? 1 : -1) * sp * Math.cos(ang);
+    P.vy = sp * Math.sin(ang);
+    P.bx = side === 1 ? PADX + PADW + BR + 0.001 : ww - PADX - PADW - BR - 0.001;
+    snd("bounce");
+  }
+
+  function point(who) {
+    if (who === 1) P.sl++; else P.sr++;
+    P.flash = 1;
+    snd("point");
+    addHist(P.sl + P.sr, (who === 1 ? "🔵 " : "🔴 ") + S.names[who - 1], P.sl + " — " + P.sr);
+    if (P.sl >= TARGET || P.sr >= TARGET) return finish();
+    serve(who === 1 ? 2 : 1);                     // la balle repart vers celui qui encaisse
+    broadcast(true);
+  }
+
+  function finish() {
+    P.state = "done";
+    stopTimer();
+    const w = P.sl > P.sr ? 1 : 2;
+    S.rounds++; S.scores[w - 1]++;
+    renderPlayers(); render();
+    snd(NET.mode === "local" || w === NET.myRole ? "win" : "lose");
+    showOverlay({
+      title: "🎉 " + S.names[w - 1] + " gagne la partie !",
+      stats: [[P.sl + " — " + P.sr, "Score"], [fmtTime(S.elapsed), "Temps"], [S.scores[0] + " — " + S.scores[1], "Parties"]],
+      nextLabel: "▶ Revanche"
+    });
+    hudShow("🏁", S.names[w - 1] + " l'emporte " + P.sl + " — " + P.sr + ".");
+    if (NET.mode === "host" && NET.connected) send({ t: "pend", sl: P.sl, sr: P.sr });
+  }
+
+  function broadcast(force) {
+    if (NET.mode !== "host" || !NET.connected) return;
+    send({ t: "ball", x: P.bx, y: P.by, l: P.yL, sl: P.sl, sr: P.sr, s: P.state });
+  }
+
+  /* ── Boucle ── */
+  function frame(ts) {
+    requestAnimationFrame(frame);
+
+    if (P.state === "count") {
+      const left = P.countEnd - Date.now();
+      if (left <= 0) { P.state = "play"; P.last = ts; P.acc = 0; hudHide(); startTimer(); snd("go"); P.lastCount = 0; }
+      else {
+        const n = left > 2200 ? 3 : left > 1200 ? 2 : 1;
+        if (P.lastCount !== n) { P.lastCount = n; snd("count"); }
+        hudShow(String(n), "Préparez-vous…");
+      }
+    } else if (P.state === "play") {
+      if (!P.last) P.last = ts;
+      let dt = (ts - P.last) / 1000; P.last = ts;
+      if (dt > 0.25) dt = 0.25;
+      P.acc += dt;
+      let guard = 0;
+      const simulateHere = (NET.mode === "host" || NET.mode === "local");
+      while (P.acc >= DT && guard++ < 20) {
+        if (simulateHere) step();
+        P.acc -= DT;
+        P.tick++;
+        if (simulateHere && NET.mode === "host" && (P.tick % 2 === 0)) broadcast();
+      }
+      if (NET.mode === "guest") {
+        /* la balle reçue est lissée pour absorber la latence */
+        P.bx += (P.tbx - P.bx) * 0.35;
+        P.by += (P.tby - P.by) * 0.35;
+        P.trail.push({ x: P.bx, y: P.by });
+        if (P.trail.length > 16) P.trail.shift();
+        const now = Date.now();
+        if (now - P.lastSend > 33) { P.lastSend = now; send({ t: "pos", y: P.yR }); }
+      }
+      if (NET.mode === "host" && NET.connected && Date.now() - P.lastPos > 10000 && !P.warned) {
+        P.warned = true; msg("Adversaire inactif depuis 10 secondes — en attente…", true);
+      }
+    }
+
+    /* lissage de l'affichage des raquettes */
+    P.shownL += (P.yL - P.shownL) * 0.4;
+    P.shownR += (P.yR - P.shownR) * 0.4;
+    if (P.flash > 0) P.flash = Math.max(0, P.flash - 0.03);
+
+    /* clavier : « neg » = vers le haut ou la gauche de L'ÉCRAN, quelle que
+       soit l'orientation choisie ; le signe canonique en découle. */
+    const spd = 0.9 / 60, sg = keySign();
+    const cl = (v) => clamp(v, PADH / 2, 1 - PADH / 2);
+    if (NET.mode === "local" && !isSolo()) {
+      if (P.keys.w) P.yL = cl(P.yL + sg * spd);
+      if (P.keys.s) P.yL = cl(P.yL - sg * spd);
+      if (P.keys.neg) P.yR = cl(P.yR + sg * spd);
+      if (P.keys.pos) P.yR = cl(P.yR - sg * spd);
+    } else {
+      const set = (v) => { if (NET.mode === "guest") P.yR = v; else P.yL = v; };
+      if (P.keys.neg || P.keys.w) set(cl(myY() + sg * spd));
+      if (P.keys.pos || P.keys.s) set(cl(myY() - sg * spd));
+    }
+    draw();
+  }
+
+  /* ── Dessin ── */
+  function rectC(x0, y0, x1, y1, color, rad) {
+    const A = T(x0, y0), B = T(x1, y1);
+    const px = Math.min(A[0], B[0]), py = Math.min(A[1], B[1]);
+    const w = Math.abs(B[0] - A[0]), h = Math.abs(B[1] - A[1]);
+    ctx.shadowColor = color; ctx.shadowBlur = 22; ctx.fillStyle = color;
+    ctx.beginPath();
+    if (ctx.roundRect) ctx.roundRect(px, py, w, h, rad); else ctx.rect(px, py, w, h);
+    ctx.fill(); ctx.shadowBlur = 0;
+  }
+
+  function draw() {
+    const w = cv.width, h = cv.height, s = SC();
+    ctx.fillStyle = "#050716"; ctx.fillRect(0, 0, w, h);
+    ctx.fillStyle = "#fff";
+    P.stars.forEach((st) => { ctx.globalAlpha = st.a; ctx.fillRect((st.x / 2) * w, st.y * h, st.r, st.r); });
+    ctx.globalAlpha = 1;
+
+    if (P.flash > 0) { ctx.fillStyle = "rgba(125,227,255," + (P.flash * 0.25).toFixed(3) + ")"; ctx.fillRect(0, 0, w, h); }
+
+    /* ligne médiane */
+    const A = T(WW / 2, 0), B = T(WW / 2, 1);
+    ctx.strokeStyle = "#38b6ff55"; ctx.lineWidth = 3; ctx.setLineDash([12, 16]);
+    ctx.beginPath(); ctx.moveTo(A[0], A[1]); ctx.lineTo(B[0], B[1]); ctx.stroke();
+    ctx.setLineDash([]);
+
+    /* scores, du côté de chaque joueur */
+    ctx.font = "900 " + Math.round(s * 0.18) + "px 'Courier New', monospace";
+    ctx.textAlign = "center"; ctx.textBaseline = "middle"; ctx.fillStyle = "#ffffff1f";
+    const SL = T(WW * 0.26, 0.22), SR = T(WW * 0.74, 0.22);
+    ctx.fillText(P.sl, SL[0], SL[1]);
+    ctx.fillText(P.sr, SR[0], SR[1]);
+    ctx.textBaseline = "alphabetic";
+
+    /* raquettes */
+    const rad = PADW * s / 2;
+    rectC(PADX, P.shownL - PADH / 2, PADX + PADW, P.shownL + PADH / 2, "#7de3ff", rad);
+    rectC(WW - PADX - PADW, P.shownR - PADH / 2, WW - PADX, P.shownR + PADH / 2, "#ff7de3", rad);
+
+    /* traînée + balle */
+    P.trail.forEach((pt, i) => {
+      const a = (i + 1) / P.trail.length, C = T(pt.x, pt.y);
+      ctx.globalAlpha = a * 0.5; ctx.fillStyle = "#fff2a8";
+      ctx.beginPath(); ctx.arc(C[0], C[1], BR * s * a, 0, 7); ctx.fill();
+    });
+    ctx.globalAlpha = 1;
+    if (P.state !== "idle") {
+      const C = T(P.bx, P.by);
+      ctx.shadowColor = "#ffe98a"; ctx.shadowBlur = 26; ctx.fillStyle = "#fffbe8";
+      ctx.beginPath(); ctx.arc(C[0], C[1], BR * s, 0, 7); ctx.fill();
+      ctx.shadowBlur = 0;
+    }
+  }
+
+  function hudShow(big, sub) { hud.classList.remove("hidden"); hudBig.textContent = big; hudSub.innerHTML = sub; }
+  function hudHide() { hud.classList.add("hidden"); }
+
+  function render() {
+    setStat("st-live", P.sl + " — " + P.sr);
+    setStat("st-role", isSolo() ? "Entraînement" : (NET.mode === "local" ? "Local" : (NET.mode === "host" ? "Raquette gauche" : "Raquette droite")));
+    setStat("st-score", S.scores[0] + " — " + S.scores[1]);
+    setStat("st-target", TARGET + " points");
+    $("pc-1").classList.toggle("active", P.state === "play" && P.vx < 0);
+    $("pc-2").classList.toggle("active", P.state === "play" && P.vx > 0);
+    if (P.state === "idle") { setGain(1, ""); setGain(2, ""); }
+    else {
+      setGain(1, P.sl + " point" + (P.sl > 1 ? "s" : "") + " / " + TARGET);
+      setGain(2, isSolo() ? "machine — " + P.sr : P.sr + " point" + (P.sr > 1 ? "s" : "") + " / " + TARGET);
+    }
+  }
+  GAME.render = render;
+
+  /* ── Manches ── */
+  function startRound() {
+    WW = COURTS[courtChoice()] || COURTS.wide;
+    resize();
+    P.sl = 0; P.sr = 0; P.yL = P.yR = 0.5; P.shownL = P.shownR = 0.5;
+    P.flash = 0; P.trail = []; P.acc = 0; P.last = 0; P.tick = 0;
+    P.lastPos = Date.now(); P.warned = false; P.lastSend = 0;
+    clearHist();
+    serve(Math.random() < 0.5 ? 1 : 2);
+    P.state = "count"; P.countEnd = Date.now() + 3200;
+    resetTimer();
+    hideOverlay();
+    if (NET.mode === "host" && NET.connected) send({ t: "pstart", ww: WW });
+    render();
+  }
+  GAME.onStart = startRound;
+  GAME.onNext = startRound;
+  GAME.onQuit = function () {
+    P.state = "idle"; stopTimer(); resetTimer();
+    P.sl = P.sr = 0; hideOverlay(); clearHist();
+    hudShow("🎾", "Partie arrêtée. Lancez une partie pour repartir.");
+    renderCommon();
+  };
+
+  /* ── Réseau ── */
+  GAME.onData = function (d) {
+    switch (d.t) {
+      case "pstart":
+        WW = d.ww || COURTS.wide;
+        $("sel-court").value = (Math.abs(WW - COURTS.compact) < 0.01) ? "compact" : "wide";
+        resize();
+        P.sl = 0; P.sr = 0; P.trail = []; P.flash = 0; P.lastSend = 0;
+        hideOverlay();
+        P.state = "count"; P.countEnd = Date.now() + 3200;
+        resetTimer(); render();
+        break;
+      case "ball":
+        if (NET.mode !== "guest") return;
+        P.tbx = d.x; P.tby = d.y; P.yL = d.l;
+        if (d.sl !== P.sl || d.sr !== P.sr) {
+          P.flash = 1;
+          addHist(d.sl + d.sr, (d.sl > P.sl ? "🔵 " : "🔴 ") + S.names[d.sl > P.sl ? 0 : 1], d.sl + " — " + d.sr);
+          P.sl = d.sl; P.sr = d.sr; snd("point"); render();
+        }
+        break;
+      case "pos":
+        if (NET.mode !== "host") return;
+        P.yR = d.y; P.lastPos = Date.now(); P.warned = false;
+        break;
+      case "pend":
+        if (NET.mode !== "guest") return;
+        P.sl = d.sl; P.sr = d.sr; P.state = "done"; stopTimer();
+        const w = P.sl > P.sr ? 1 : 2;
+        S.rounds++; S.scores[w - 1]++;
+        renderPlayers(); render();
+        snd(w === NET.myRole ? "win" : "lose");
+        showOverlay({
+          title: "🎉 " + S.names[w - 1] + " gagne la partie !",
+          stats: [[P.sl + " — " + P.sr, "Score"], [fmtTime(S.elapsed), "Temps"], [S.scores[0] + " — " + S.scores[1], "Parties"]]
+        });
+        hudShow("🏁", S.names[w - 1] + " l'emporte " + P.sl + " — " + P.sr + ".");
+        break;
+    }
+  };
+  GAME.onDisconnected = function () {
+    if (P.state === "play" || P.state === "count") {
+      P.state = "done"; stopTimer();
+      showOverlay({ title: "🏳️ Adversaire déconnecté", stats: [[P.sl + " — " + P.sr, "Score au moment de l'arrêt"]] });
+      hudShow("🏳️", "Adversaire déconnecté.");
+    }
+  };
+  GAME.onModeChange = function () {
+    P.state = "idle"; P.sl = P.sr = 0;
+    resize();
+    hudShow("🎾", "Choisissez « Lancer la partie » pour commencer.");
+  };
+
+  /* ── Redimensionnement + commandes ── */
+  function resize() {
+    const wrap = $("stage-wrap");
+    const ar = portrait() ? 1 / WW : WW;
+    let w = wrap.clientWidth, h = w / ar;
+    if (h > wrap.clientHeight) { h = wrap.clientHeight; w = h * ar; }
+    cv.width = Math.max(200, Math.round(w));
+    cv.height = Math.max(200, Math.round(h));
+    draw();
+  }
+  window.addEventListener("resize", resize);
+
+  GAME.init = function () {
+    initStars();
+    resize();
+    const setFromPointer = (e) => {
+      const r = cv.getBoundingClientRect();
+      const px = (e.clientX - r.left) / r.width * cv.width;
+      const py = (e.clientY - r.top) / r.height * cv.height;
+      const y = clamp(invY(px, py), PADH / 2, 1 - PADH / 2);
+      if (NET.mode === "guest") P.yR = y; else P.yL = y;
+    };
+    cv.addEventListener("pointermove", (e) => { e.preventDefault(); setFromPointer(e); });
+    cv.addEventListener("pointerdown", (e) => { e.preventDefault(); setFromPointer(e); });
+
+    document.addEventListener("keydown", (e) => {
+      if (/^(INPUT|TEXTAREA|SELECT)$/.test(document.activeElement.tagName)) return;
+      if (e.key === "ArrowUp" || e.key === "ArrowLeft") { P.keys.neg = true; e.preventDefault(); }
+      if (e.key === "ArrowDown" || e.key === "ArrowRight") { P.keys.pos = true; e.preventDefault(); }
+      if (e.key === "w" || e.key === "z" || e.key === "a" || e.key === "q") P.keys.w = true;
+      if (e.key === "s" || e.key === "d") P.keys.s = true;
+    });
+    document.addEventListener("keyup", (e) => {
+      if (e.key === "ArrowUp" || e.key === "ArrowLeft") P.keys.neg = false;
+      if (e.key === "ArrowDown" || e.key === "ArrowRight") P.keys.pos = false;
+      if (e.key === "w" || e.key === "z" || e.key === "a" || e.key === "q") P.keys.w = false;
+      if (e.key === "s" || e.key === "d") P.keys.s = false;
+    });
+    $("sel-view").addEventListener("change", () => { resize(); render(); });
+    $("sel-court").addEventListener("change", () => {
+      if (P.state === "play" || P.state === "count") { msg("Le format s'appliquera à la prochaine partie."); return; }
+      WW = COURTS[courtChoice()] || COURTS.wide;
+      P.bx = WW / 2; resize(); render();
+    });
+    $("sel-mode").addEventListener("change", () => { renderPlayers(); render(); });
+
+    hudShow("🎾", "Tennis — la raquette suit la souris ou le doigt.<small>Choisissez l’orientation du terrain dans le bandeau, puis lancez la partie.</small>");
+    requestAnimationFrame(frame);
+    render();
+  };
+
+
+  /* ═══════════ INITIALISATION ═══════════ */
+  wireCore();
+  renderCommon();
+  if (GAME.init) GAME.init();
+})();
+</script>
+</body>
+</html>

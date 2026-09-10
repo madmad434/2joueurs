@@ -1,0 +1,1936 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Carrom</title>
+
+<style>
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    /* ── CHARTE GRAPHIQUE (identique au Jeu des paires) ── */
+    --brand-light:  #C2F6FF;
+    --brand-dark:   #38B6FF;
+
+    --config-bg:    #38B6FF;
+    --config-border:#1e9fe8;
+    --config-text:  #063a52;
+    --config-muted: #0a5b80;
+    --input-bg:     #ffffff;
+    --input-border: #7dd3f0;
+    --game-bg:      #C2F6FF;
+    --side-bg:      #38B6FF;
+    --side-border:  #1e9fe8;
+    --stats-bg:     #38B6FF;
+    --stats-border: #1e9fe8;
+    --accent:       #0284c7;
+    --accent-light: #e0f6ff;
+    --accent-dark:  #075985;
+    --green:        #10b981;
+    --green-light:  #d1fae5;
+    --green-dark:   #065f46;
+    --red:          #ef4444;
+    --red-light:    #fee2e2;
+    --yellow:       #f59e0b;
+    --yellow-light: #fef3c7;
+    --purple:       #8b5cf6;
+    --cell-bg:      #ffffff;
+    --p1:           #0369a1;
+    --p2:           #b91c1c;
+    --text:         #06283d;
+    --text-muted:   #0a5b80;
+    --radius:       12px;
+    --radius-sm:    8px;
+    --t:            0.18s ease;
+  }
+
+  html, body { width:100%; height:100%; overflow:hidden; background:var(--game-bg); color:var(--text); font-family:'Segoe UI','Helvetica Neue',Arial,sans-serif; user-select:none; }
+  #app { display:flex; flex-direction:column; height:100vh; overflow:hidden; }
+
+  /* ── CONFIG ── */
+  #configpanel {
+    background:var(--config-bg); border-bottom:1px solid var(--config-border);
+    padding:10px 16px; display:flex; align-items:center; gap:10px; flex-wrap:wrap; flex-shrink:0;
+    box-shadow:0 1px 4px #00000010;
+  }
+  .game-title { font-size:1.2rem; font-weight:900; color:#fff; letter-spacing:2px; text-transform:uppercase; white-space:nowrap; font-family:'Courier New',Courier,monospace; margin-right:4px; }
+  .separator  { width:1px; height:28px; background:#8adcff; flex-shrink:0; }
+  .cfg-group  { display:flex; align-items:center; gap:6px; }
+  .cfg-label  { font-size:.72rem; font-weight:800; color:#eaffff; text-transform:uppercase; letter-spacing:.8px; white-space:nowrap; }
+
+  select, input[type=text] {
+    height:34px; background:var(--input-bg); border:1px solid var(--input-border); border-radius:var(--radius-sm);
+    color:var(--config-text); font-size:.85rem; font-family:inherit; font-weight:700; cursor:pointer;
+    outline:none; transition:border-color var(--t),box-shadow var(--t);
+    appearance:none; -webkit-appearance:none; background-color:var(--input-bg);
+    padding:0 8px; box-shadow:0 1px 3px #0000000a;
+  }
+  select {
+    background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%2364748b' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");
+    background-repeat:no-repeat; background-position:right 8px center; padding:0 26px 0 8px;
+  }
+  input[type=text] { cursor:text; width:130px; }
+  select:hover, input[type=text]:hover { border-color:var(--accent); }
+  select:focus, input[type=text]:focus { border-color:var(--accent); box-shadow:0 0 0 3px #3b82f630; }
+  select:disabled, input:disabled { opacity:.5; cursor:not-allowed; }
+  select.dim-select { width:78px; }
+  select#sel-symbols { min-width:150px; }
+
+  .btn {
+    display:inline-flex; align-items:center; gap:6px; height:34px; padding:0 14px;
+    border-radius:var(--radius-sm); border:1px solid var(--input-border);
+    background:var(--input-bg); color:var(--config-text);
+    font-size:.82rem; font-family:inherit; font-weight:700;
+    cursor:pointer; transition:all var(--t); white-space:nowrap; box-shadow:0 1px 3px #0000000a;
+  }
+  .btn:hover { border-color:var(--accent); background:var(--accent-light); color:var(--accent-dark); }
+  .btn:disabled { opacity:.45; cursor:not-allowed; }
+  .btn:disabled:hover { border-color:var(--input-border); background:var(--input-bg); color:var(--config-text); }
+  .btn.primary { background:var(--accent); color:#fff; border-color:var(--accent); font-size:.88rem; padding:0 18px; box-shadow:0 2px 8px #3b82f640; }
+  .btn.primary:hover { background:var(--accent-dark); }
+  .btn.danger { background:var(--red-light); border-color:#fca5a5; color:#b91c1c; }
+  .btn.danger:hover { background:#fecaca; border-color:var(--red); }
+  .btn.btn-net  { background:#eff6ff; border-color:#93c5fd; color:#1d4ed8; }
+  .btn.btn-net:hover  { background:#dbeafe; border-color:#3b82f6; }
+  .btn.btn-aide-toggle { background:#fefce8; border-color:#fde68a; color:#92400e; }
+  .btn.btn-aide-toggle:hover { background:#fef9c3; border-color:#f59e0b; }
+  #btn-quit { margin-left:auto; }
+
+  /* ── BANDEAU RÉSEAU ── */
+  #netbar { display:flex; align-items:center; gap:12px; padding:6px 16px; background:#eaf9ff; border-bottom:1px solid var(--config-border); flex-shrink:0; font-size:.78rem; font-weight:700; color:var(--config-text); flex-wrap:wrap; }
+  .dot { width:10px; height:10px; border-radius:50%; background:#94a3b8; flex-shrink:0; box-shadow:0 0 0 3px #94a3b830; }
+  .dot.on   { background:var(--green); box-shadow:0 0 0 3px #10b98130; animation:blink 2s ease-in-out infinite; }
+  .dot.wait { background:var(--yellow); box-shadow:0 0 0 3px #f59e0b30; animation:blink 1s ease-in-out infinite; }
+  .dot.off  { background:var(--red); box-shadow:0 0 0 3px #ef444430; }
+  @keyframes blink { 0%,100%{opacity:1} 50%{opacity:.45} }
+  .code-pill { font-family:'Courier New',Courier,monospace; font-size:1rem; font-weight:900; letter-spacing:3px; background:#fff; border:1px solid var(--input-border); border-radius:var(--radius-sm); padding:3px 12px; color:var(--accent-dark); user-select:text; }
+  #net-ping { margin-left:auto; font-family:'Courier New',Courier,monospace; color:var(--text-muted); }
+
+  /* ── VALIDATION ── */
+  #val-msg { font-size:.75rem; color:#b91c1c; padding:4px 16px; font-weight:700; background:var(--red-light); border-bottom:1px solid #fca5a5; display:none; }
+  #val-msg.visible { display:block; }
+  #val-msg.info { color:#1e40af; background:#dbeafe; border-bottom-color:#93c5fd; }
+
+  /* ── STATS BAR ── */
+  #statsbar { display:flex; align-items:stretch; background:var(--stats-bg); border-bottom:1px solid var(--stats-border); flex-shrink:0; }
+  .stat-block { display:flex; flex-direction:column; align-items:center; justify-content:center; padding:4px 16px; flex:1; border-right:1px solid var(--stats-border); transition:background var(--t); cursor:default; }
+  .stat-block:last-child { border-right:none; }
+  .stat-block:hover { background:#1e9fe8; }
+  .stat-label { font-size:.6rem; font-weight:800; text-transform:uppercase; letter-spacing:1.2px; color:#dff7ff; }
+  .stat-value { font-family:'Courier New',Courier,monospace; font-size:1rem; font-weight:700; color:#fff; line-height:1.1; }
+  .stat-value.c-green  { color:#7dffcf; }
+  .stat-value.c-yellow { color:#ffe27a; }
+  .stat-value.c-purple { color:#e5c9ff; }
+
+  /* ── MAIN ── */
+  #main { display:flex; flex:1 1 auto; overflow:hidden; min-height:0; }
+
+  /* ── PANNEAU LATÉRAL ── */
+  #sidepanel { width:225px; min-width:200px; background:var(--side-bg); border-right:1px solid var(--side-border); display:flex; flex-direction:column; padding:14px 12px; overflow-y:auto; flex-shrink:0; gap:16px; box-shadow:2px 0 8px #00000008; }
+  .side-section-title { font-size:.63rem; font-weight:900; color:#fff; text-transform:uppercase; letter-spacing:1.5px; padding-bottom:6px; border-bottom:2px solid #1e9fe8; }
+
+  .player-card { display:flex; align-items:center; gap:10px; background:#fff; border:2px solid #fff; border-radius:var(--radius-sm); padding:8px 10px; margin-top:8px; transition:all var(--t); }
+  .player-card.active { border-color:var(--yellow); box-shadow:0 0 0 3px #fde68a80; transform:translateX(2px); }
+  .player-card .pc-mark { font-size:1.5rem; line-height:1; width:34px; height:34px; display:flex; align-items:center; justify-content:center; border-radius:var(--radius-sm); background:var(--accent-light); }
+  .player-card.p2 .pc-mark { background:var(--red-light); }
+  .player-card .pc-body { display:flex; flex-direction:column; min-width:0; flex:1; }
+  .player-card .pc-name { font-size:.8rem; font-weight:800; color:var(--config-text); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .player-card .pc-sub  { font-size:.62rem; font-weight:800; text-transform:uppercase; letter-spacing:.6px; color:var(--text-muted); }
+  .player-card .pc-score { font-family:'Courier New',Courier,monospace; font-size:1.15rem; font-weight:700; color:var(--accent-dark); }
+  .player-card.p2 .pc-score { color:var(--p2); }
+
+  .side-counter { display:flex; align-items:center; justify-content:space-between; background:#f3e8ff; border:1px solid #c4b5fd; border-radius:var(--radius-sm); padding:6px 10px; margin-top:8px; }
+  .side-counter .sc-label { font-size:.74rem; color:#6d28d9; font-weight:700; }
+  .side-counter .sc-val   { font-family:'Courier New',Courier,monospace; color:#6d28d9; font-weight:700; font-size:.9rem; }
+
+  #chat-box { display:flex; flex-direction:column; gap:5px; margin-top:8px; max-height:150px; overflow-y:auto; }
+  .chat-msg { background:#fff; border-radius:8px; padding:4px 8px; font-size:.74rem; color:var(--config-text); line-height:1.35; word-break:break-word; user-select:text; }
+  .chat-msg b { color:var(--accent-dark); }
+  .chat-msg.mine b { color:var(--p2); }
+  .chat-msg.sys { background:#dbeafe; color:#1e40af; font-weight:700; }
+  #chat-form { display:flex; gap:5px; margin-top:6px; }
+  #chat-input { flex:1; min-width:0; width:auto; height:30px; font-weight:600; font-size:.78rem; }
+  #chat-send { height:30px; padding:0 10px; }
+  #chat-quick { display:flex; gap:4px; margin-top:5px; flex-wrap:wrap; }
+  #chat-quick button { background:#fff; border:1px solid var(--input-border); border-radius:6px; font-size:.95rem; padding:2px 6px; cursor:pointer; }
+  #chat-quick button:hover { background:var(--accent-light); border-color:var(--accent); }
+
+  #history-list { display:flex; flex-direction:column; gap:4px; margin-top:8px; max-height:140px; overflow-y:auto; }
+  .hist-item { display:flex; align-items:center; gap:6px; background:#fff; border-radius:6px; padding:3px 8px; font-size:.74rem; font-weight:700; color:var(--config-text); }
+  .hist-item .hi-num { font-family:'Courier New',Courier,monospace; color:var(--text-muted); min-width:20px; }
+  .hist-item .hi-pos { font-family:'Courier New',Courier,monospace; margin-left:auto; color:var(--accent-dark); }
+
+  /* ── ZONE DE JEU ── */
+  #grid-area { flex:1; display:flex; align-items:center; justify-content:center; padding:16px; overflow:hidden; min-width:0; background:var(--game-bg); position:relative; }
+  #board { display:flex; flex-direction:column; gap:6px; align-items:center; }
+  .board-row { display:flex; gap:6px; }
+
+  .cell {
+    background:var(--cell-bg); border:2px solid var(--input-border); border-radius:var(--radius);
+    display:flex; align-items:center; justify-content:center; cursor:pointer; line-height:1;
+    transition:border-color var(--t),box-shadow var(--t),background var(--t);
+    box-shadow:0 2px 8px #0284c718;
+  }
+  .cell.playable:hover { border-color:var(--accent); box-shadow:0 4px 16px #3b82f640,0 0 0 3px #3b82f620; }
+  .cell:not(.playable) { cursor:default; }
+  .cell .mark  { animation:popIn .26s cubic-bezier(.34,1.56,.64,1); }
+  .cell .ghost { opacity:.16; }
+  .cell.p1 { color:var(--p1); }
+  .cell.p2 { color:var(--p2); }
+  .cell.last { box-shadow:0 0 0 3px #f59e0b70; }
+  .cell.win  { background:var(--green-light); border-color:var(--green); animation:winPulse .55s ease 2; }
+  @keyframes popIn { from{transform:scale(0) rotate(-12deg);opacity:0} to{transform:scale(1) rotate(0);opacity:1} }
+  @keyframes winPulse { 0%,100%{box-shadow:0 2px 8px #10b98140} 50%{box-shadow:0 0 0 6px #10b98150} }
+
+  #placeholder { text-align:center; color:var(--accent-dark); font-weight:800; font-size:1rem; opacity:.8; max-width:460px; line-height:1.6; }
+  #placeholder .ph-big { font-size:3rem; display:block; margin-bottom:10px; }
+
+  /* ── OVERLAYS / MODALES ── */
+  .modal { display:none; position:fixed; inset:0; background:#00000070; backdrop-filter:blur(8px); z-index:150; align-items:center; justify-content:center; }
+  .modal.show { display:flex; }
+  .modal-card { background:#fff; border:1px solid var(--side-border); border-radius:20px; padding:30px 36px; display:flex; flex-direction:column; gap:16px; box-shadow:0 30px 80px #00000030; animation:slideUp .35s cubic-bezier(.34,1.56,.64,1); width:520px; max-width:92vw; max-height:92vh; overflow-y:auto; }
+  @keyframes slideUp { from{transform:translateY(30px) scale(.95);opacity:0} to{transform:translateY(0) scale(1);opacity:1} }
+  .modal-card h2 { font-size:1.35rem; font-weight:900; color:var(--accent-dark); }
+  .modal-card p  { font-size:.85rem; color:var(--text-muted); line-height:1.5; }
+  .modal-head { display:flex; align-items:center; justify-content:space-between; gap:12px; }
+  .modal-close { background:#f1f5f9; border:1px solid #e2e8f0; border-radius:8px; width:32px; height:32px; cursor:pointer; font-size:1rem; font-weight:700; color:#64748b; }
+
+  .choice-grid { display:flex; flex-direction:column; gap:10px; }
+  .choice {
+    display:flex; align-items:center; gap:14px; text-align:left; cursor:pointer;
+    background:var(--accent-light); border:2px solid var(--input-border); border-radius:var(--radius);
+    padding:14px 16px; transition:all var(--t); font-family:inherit;
+  }
+  .choice:hover:not(:disabled) { border-color:var(--accent); background:#d5f1ff; transform:translateY(-1px); }
+  .choice:disabled { opacity:.5; cursor:not-allowed; }
+  .choice .ch-ico  { font-size:1.8rem; }
+  .choice .ch-tit  { font-size:.95rem; font-weight:900; color:var(--accent-dark); }
+  .choice .ch-sub  { font-size:.76rem; color:var(--text-muted); font-weight:600; }
+
+  .field-row { display:flex; align-items:center; gap:8px; flex-wrap:wrap; }
+  .field-row label { font-size:.72rem; font-weight:800; text-transform:uppercase; letter-spacing:.8px; color:var(--text-muted); min-width:92px; }
+  .code-input { font-family:'Courier New',Courier,monospace; font-size:1.4rem !important; letter-spacing:6px; text-align:center; text-transform:uppercase; height:48px !important; width:190px !important; font-weight:900 !important; }
+  .big-code { font-family:'Courier New',Courier,monospace; font-size:2.4rem; font-weight:900; letter-spacing:10px; color:var(--accent-dark); background:var(--accent-light); border:2px dashed var(--accent); border-radius:var(--radius); padding:14px; text-align:center; user-select:text; }
+  .share-link { display:flex; gap:6px; }
+  .share-link input { flex:1; min-width:0; width:auto !important; font-size:.75rem !important; font-weight:600 !important; }
+  .note { background:#fef3c7; border:1px solid #fde68a; border-radius:var(--radius-sm); padding:10px 12px; font-size:.78rem; color:#92400e; line-height:1.5; }
+  .note.blue { background:#dbeafe; border-color:#93c5fd; color:#1e40af; }
+
+  .overlay-stats { display:flex; gap:24px; background:var(--stats-bg); border-radius:var(--radius); padding:14px 20px; width:100%; justify-content:center; }
+  .ov-stat { display:flex; flex-direction:column; align-items:center; gap:2px; }
+  .ov-stat-val { font-family:'Courier New',Courier,monospace; font-size:1.4rem; font-weight:700; color:#fff; }
+  .ov-stat-lbl { font-size:.65rem; font-weight:800; text-transform:uppercase; letter-spacing:1px; color:#dff7ff; }
+  .overlay-buttons { display:flex; gap:10px; flex-wrap:wrap; justify-content:center; }
+  #ov-card { align-items:center; text-align:center; }
+  #ov-title { font-size:1.7rem; font-weight:900; color:var(--green-dark); }
+  #ov-title.draw { color:var(--accent-dark); }
+  #ov-wait { font-size:.82rem; font-weight:700; color:var(--text-muted); display:none; }
+
+  ol.help { margin:0; padding-left:20px; display:flex; flex-direction:column; gap:9px; font-size:.85rem; color:#1e293b; line-height:1.5; }
+
+  /* ══════════ COMPLÉMENTS COMMUNS AUX JEUX DE CETTE SÉRIE ══════════ */
+
+  /* Zone de jeu « plateau » */
+  #grid-area { flex:1; display:flex; align-items:center; justify-content:center; padding:16px; overflow:hidden; min-width:0; background:var(--game-bg); position:relative; }
+
+  /* ── Scène canvas (jeux d'action) ── */
+  #stage-wrap { position:relative; display:flex; align-items:center; justify-content:center; width:100%; height:100%; }
+  canvas.stage {
+    background:#04121f; border:2px solid var(--input-border); border-radius:var(--radius);
+    box-shadow:0 8px 30px #0284c740; max-width:100%; max-height:100%;
+    touch-action:none; display:block;
+  }
+  .hud {
+    position:absolute; inset:0; display:flex; flex-direction:column; align-items:center; justify-content:center;
+    gap:12px; text-align:center; pointer-events:none; color:#fff;
+  }
+  .hud.hidden { display:none; }
+  .hud-big { font-family:'Courier New',Courier,monospace; font-size:clamp(2rem,8vw,4rem); font-weight:900; color:#7de3ff; text-shadow:0 0 22px #38b6ff,0 0 44px #0284c7; }
+  .hud-sub { font-size:.95rem; font-weight:800; background:#031624cc; border:1px solid #38b6ff66; border-radius:12px; padding:8px 16px; max-width:90%; line-height:1.5; }
+  .hud-sub small { display:block; font-weight:600; opacity:.85; margin-top:4px; }
+  .hud button { pointer-events:auto; }
+
+  /* Manettes tactiles */
+  #touchpad { position:absolute; left:0; right:0; bottom:10px; display:none; justify-content:center; gap:10px; pointer-events:none; }
+  #touchpad.on { display:flex; }
+  .tbtn {
+    pointer-events:auto; width:66px; height:56px; border-radius:14px; border:2px solid #38b6ff88;
+    background:#03192bcc; color:#9fe8ff; font-size:1.4rem; font-weight:900; display:flex; align-items:center; justify-content:center;
+    box-shadow:0 4px 14px #00000050; user-select:none;
+  }
+  .tbtn:active { background:#0a3a5acc; color:#fff; }
+
+  /* Bandeau de manches (best of 3) */
+  .round-pips { display:flex; gap:6px; align-items:center; }
+  .pip { width:12px; height:12px; border-radius:50%; background:#ffffff55; border:1px solid #ffffff99; }
+  .pip.p1 { background:#7dffcf; }
+  .pip.p2 { background:#ffb0b0; }
+
+  /* ── AWALÉ ── */
+  #awale { display:flex; align-items:center; justify-content:center; gap:16px; flex-wrap:nowrap; }
+  .store {
+    width:92px; padding:14px 8px; background:#fff; border:2px solid var(--input-border); border-radius:26px;
+    display:flex; flex-direction:column; align-items:center; gap:6px; box-shadow:0 4px 16px #0284c722; min-height:230px; justify-content:center;
+  }
+  .store .st-name { font-size:.68rem; font-weight:900; text-transform:uppercase; letter-spacing:.8px; color:var(--text-muted); text-align:center; word-break:break-word; }
+  .store .st-val  { font-family:'Courier New',Courier,monospace; font-size:2.2rem; font-weight:900; color:var(--accent-dark); line-height:1; }
+  .store .st-lbl  { font-size:.62rem; font-weight:800; text-transform:uppercase; letter-spacing:1px; color:var(--text-muted); }
+  .store.p2 .st-val { color:var(--p2); }
+  .store.gain { animation:storeGain .5s ease; }
+  @keyframes storeGain { 0%,100%{transform:scale(1)} 45%{transform:scale(1.12)} }
+
+  #awale-board { background:#8bd8f4; border:3px solid #4bb3dd; border-radius:28px; padding:14px; display:flex; flex-direction:column; gap:12px; box-shadow:inset 0 3px 12px #0000001f,0 6px 22px #0284c72e; }
+  .awale-row { display:flex; gap:12px; }
+  .pit {
+    width:78px; height:78px; border-radius:50%; background:var(--cell-bg); border:2px solid var(--input-border);
+    display:flex; flex-direction:column; align-items:center; justify-content:center; gap:1px;
+    box-shadow:inset 0 3px 8px #0284c722,0 2px 6px #00000012; position:relative; cursor:default;
+    transition:transform var(--t),border-color var(--t),box-shadow var(--t),background var(--t);
+  }
+  .pit .pit-n { font-family:'Courier New',Courier,monospace; font-size:1.5rem; font-weight:900; color:var(--accent-dark); line-height:1; }
+  .pit .pit-seeds { display:flex; flex-wrap:wrap; gap:2px; justify-content:center; max-width:56px; height:14px; overflow:hidden; }
+  .pit .sd { width:6px; height:6px; border-radius:50%; background:#c98b3a; box-shadow:inset 0 -1px 0 #8a5a1f; }
+  .pit.mine { background:#eefbff; }
+  .pit.playable { cursor:pointer; border-color:var(--accent); box-shadow:0 0 0 3px #3b82f630,inset 0 3px 8px #0284c722; }
+  .pit.playable:hover { transform:translateY(-3px); background:var(--accent-light); }
+  .pit.drop { animation:pitDrop .22s ease; border-color:var(--yellow); }
+  @keyframes pitDrop { 0%{transform:scale(1)} 50%{transform:scale(1.14)} 100%{transform:scale(1)} }
+  .pit.cap { background:var(--green-light); border-color:var(--green); animation:pitDrop .3s ease; }
+  .pit-idx { position:absolute; bottom:4px; font-size:.55rem; font-weight:800; color:#9ac7dc; letter-spacing:.5px; }
+
+  /* Écran d'accueil du plateau */
+  #placeholder { text-align:center; color:var(--accent-dark); font-weight:800; font-size:1rem; opacity:.85; max-width:520px; line-height:1.6; }
+  #placeholder .ph-big { font-size:3rem; display:block; margin-bottom:10px; }
+
+  ol.help { margin:0; padding-left:20px; display:flex; flex-direction:column; gap:9px; font-size:.85rem; color:#1e293b; line-height:1.5; }
+  ul.help { margin:0; padding-left:20px; display:flex; flex-direction:column; gap:7px; font-size:.85rem; color:#1e293b; line-height:1.5; }
+
+  .side-note { background:#fff; border-radius:var(--radius-sm); padding:8px 10px; margin-top:8px; font-size:.72rem; color:var(--config-text); line-height:1.45; font-weight:600; }
+  .side-note b { color:var(--accent-dark); }
+
+  @media (max-width:900px) {
+    #sidepanel { display:none; }
+    .pit { width:56px; height:56px; }
+    .store { width:70px; min-height:170px; }
+  }
+
+  /* ── Fenêtre d'historique ── */
+  #hist-modal { z-index:170; }
+  #hist-modal #history-list { display:flex; flex-direction:column; gap:5px; max-height:52vh; overflow-y:auto; margin-top:0; }
+  #hist-modal .hist-item { background:var(--accent-light); border:1px solid var(--input-border); padding:5px 10px; }
+  #hist-empty { font-size:.85rem; color:var(--text-muted); font-weight:700; text-align:center; padding:18px 0; }
+  #hist-players { font-size:.82rem; font-weight:800; color:var(--accent-dark); background:var(--accent-light);
+    border:1px solid var(--input-border); border-radius:var(--radius-sm); padding:7px 12px; text-align:center; }
+  #net-step-file ul.constraints { margin:10px 0 12px; padding-left:20px; display:flex; flex-direction:column; gap:7px;
+    font-size:.85rem; line-height:1.5; color:#1e293b; }
+  #net-step-file code { background:var(--accent-light); padding:1px 5px; border-radius:5px; font-size:.82em; }
+  .pc-gain { font-size:.72rem; font-weight:900; color:var(--accent-dark); background:#ffffffcc;
+    border-radius:6px; padding:1px 7px; margin-top:3px; align-self:flex-start; letter-spacing:.2px; }
+  #grid-area { padding-bottom:30px; }
+
+  /* ── BATAILLE NAVALE ── */
+  #bn-root { --cs:30px; display:none; flex-direction:column; gap:10px; align-items:center; width:100%; }
+  #bn-bar { display:flex; flex-wrap:wrap; gap:7px; align-items:center; justify-content:center;
+    background:#ffffffcc; border:1px solid var(--input-border); border-radius:var(--radius); padding:7px 10px; }
+  .bn-lbl { font-size:.8rem; font-weight:800; color:var(--accent-dark); }
+  .bn-ship { font:inherit; font-size:.74rem; font-weight:800; padding:5px 9px; border-radius:8px; cursor:pointer;
+    border:2px solid var(--input-border); background:#fff; color:var(--config-text); }
+  .bn-ship b { color:var(--accent-dark); }
+  .bn-ship.cur { border-color:var(--accent); background:var(--accent-light); box-shadow:0 0 0 3px #3b82f630; }
+  .bn-ship.done { opacity:.45; text-decoration:line-through; cursor:default; }
+  #bn-wrap { display:flex; gap:22px; align-items:flex-start; justify-content:center; flex-wrap:wrap; }
+  .bn-side { display:flex; flex-direction:column; gap:6px; align-items:center; }
+  .bn-title { font-size:.78rem; font-weight:900; text-transform:uppercase; letter-spacing:.6px; color:var(--accent-dark); }
+  .bn-grid { display:grid; gap:2px; background:#bfe8fa; padding:5px; border-radius:var(--radius);
+    border:2px solid var(--input-border); box-shadow:0 3px 14px #0284c722; transition:filter var(--t); }
+  .bn-grid.blur { filter:blur(9px); pointer-events:none; }
+  .bn-h { width:var(--cs); height:var(--cs); display:flex; align-items:center; justify-content:center;
+    font-size:calc(var(--cs) * .42); font-weight:900; color:var(--accent-dark); opacity:.75; }
+  .bn-c { width:var(--cs); height:var(--cs); border-radius:4px; background:#e8f8ff; border:1px solid #a5dcf2;
+    transition:background var(--t),transform var(--t); position:relative; }
+  .bn-c.ship { background:#94a3b8; border-color:#64748b; }
+  .bn-c.miss { background:#dbeafe; }
+  .bn-c.miss::after { content:"•"; position:absolute; inset:0; display:flex; align-items:center; justify-content:center;
+    color:#3b82f6; font-size:calc(var(--cs) * .7); font-weight:900; }
+  .bn-c.hit { background:var(--yellow-light); border-color:var(--yellow); }
+  .bn-c.hit::after { content:"✕"; position:absolute; inset:0; display:flex; align-items:center; justify-content:center;
+    color:#b45309; font-size:calc(var(--cs) * .6); font-weight:900; }
+  .bn-c.sunk { background:#fecaca; border-color:#dc2626; }
+  .bn-c.sunk::after { content:"✕"; color:#991b1b; }
+  .bn-c.prev { background:var(--green-light); border-color:var(--green); box-shadow:inset 0 0 0 2px var(--green); }
+  .bn-c.prev-bad { background:#fecaca; border-color:#dc2626; }
+  .bn-dir.on { border-color:var(--accent); background:var(--accent-light); color:var(--accent-dark);
+    box-shadow:0 0 0 3px #3b82f630; }
+  .bn-c.tgt.aim { cursor:pointer; }
+  .bn-c.tgt.aim:hover { background:var(--accent-light); transform:scale(1.12); }
+  #bn-hand { position:absolute; inset:0; display:flex; flex-direction:column; align-items:center; justify-content:center;
+    gap:14px; background:#e0f6ffee; z-index:5; text-align:center; padding:20px; }
+  #bn-hand.hidden { display:none; }
+  #bn-hand-txt { font-size:1.05rem; font-weight:900; color:var(--accent-dark); line-height:1.6; }
+  #bn-hand-txt small { display:block; font-size:.8rem; font-weight:600; color:var(--text-muted); margin-top:6px; }
+  .fleet-row { display:flex; align-items:center; gap:10px; padding:7px 10px; border-radius:var(--radius-sm);
+    background:var(--accent-light); border:1px solid var(--input-border); }
+  .fr-n { flex:1; font-size:.86rem; font-weight:800; color:var(--config-text); }
+  .fr-s { font-size:.74rem; font-weight:700; color:var(--text-muted); }
+  .fr-c { display:flex; align-items:center; gap:8px; }
+  .fr-c b { min-width:20px; text-align:center; font-family:'Courier New',monospace; font-size:1.1rem; color:var(--accent-dark); }
+  .fr-m { width:30px; height:28px; padding:0; justify-content:center; font-size:1rem; font-weight:900; }
+  #fleet-rows { display:flex; flex-direction:column; gap:6px; margin-bottom:10px; }
+  #fleet-presets { display:flex; gap:8px; flex-wrap:wrap; margin-bottom:10px; }
+
+</style>
+</head>
+<body>
+<div id="app">
+
+  <!-- CONFIG -->
+  <div id="configpanel">
+    <span class="game-title">⚪ Carrom</span>
+    <div class="separator"></div>
+    <div class="cfg-group">
+      <span class="cfg-label">Joueurs</span>
+      <select id="sel-mode">
+        <option value="2" selected>2 joueurs — duel</option>
+        <option value="1">1 joueur — entraînement</option>
+      </select>
+    </div>
+    <div class="cfg-group">
+      <span class="cfg-label">Ma ligne de base</span>
+      <select id="sel-view">
+        <option value="bottom" selected>En bas</option>
+        <option value="left">À gauche</option>
+        <option value="top">En haut</option>
+        <option value="right">À droite</option>
+      </select>
+    </div>
+    <div class="cfg-group">
+      <span class="cfg-label">Puissance du tir</span>
+      <select id="sel-power">
+        <option value="1.3">Douce</option>
+        <option value="1.8" selected>Normale</option>
+        <option value="2.4">Forte</option>
+        <option value="3.1">Très forte</option>
+      </select>
+    </div>
+    <div class="cfg-group">
+      <span class="cfg-label">Aide à la visée</span>
+      <select id="sel-guide">
+        <option value="0.18">Ligne courte</option>
+        <option value="0.55" selected>Ligne longue</option>
+        <option value="0">Aucune</option>
+      </select>
+    </div>
+    <div class="separator"></div>
+    <div class="cfg-group">
+      <span class="cfg-label">Mon pseudo</span>
+      <input type="text" id="inp-me" maxlength="14" value="Joueur 1">
+    </div>
+    <div class="separator"></div>
+    <button class="btn primary" id="btn-start">▶ Lancer la manche</button>
+    <button class="btn btn-net" id="btn-connect">🌐 Connexion</button>
+    <button class="btn" id="btn-hist">📜 Historique</button>
+    <button class="btn" id="btn-sound">🔊 Son</button>
+    <button class="btn" id="btn-full">⛶ Plein écran</button>
+    <button class="btn btn-aide-toggle" id="btn-aide-toggle">❓ Aide</button>
+    <button class="btn" id="btn-reset">⟲ Réinitialiser</button>
+    <button class="btn danger" id="btn-quit">✕ Quitter</button>
+  </div>
+
+  <!-- BANDEAU RÉSEAU -->
+  <div id="netbar">
+    <span class="dot" id="net-dot"></span>
+    <span id="net-text">Mode local — les deux joueurs jouent sur cet écran</span>
+    <span id="net-code-wrap" style="display:none;">Code&nbsp;: <span class="code-pill" id="net-code">-----</span></span>
+    <button class="btn" id="btn-copy-link" style="display:none;height:26px;padding:0 10px;font-size:.74rem;">🔗 Copier le lien d'invitation</button>
+    <span id="net-ping"></span>
+  </div>
+
+  <!-- VALIDATION -->
+  <div id="val-msg"></div>
+
+  <!-- STATS BAR -->
+  <div id="statsbar">
+    <div class="stat-block"><span class="stat-label">Temps</span><span class="stat-value" id="st-time">—</span></div>
+    <div class="stat-block"><span class="stat-label">Au tour de</span><span class="stat-value c-yellow" id="st-turn">—</span></div>
+    <div class="stat-block"><span class="stat-label">Pions restants</span><span class="stat-value" id="st-left">—</span></div>
+    <div class="stat-block"><span class="stat-label">Manches gagnées</span><span class="stat-value c-green" id="st-score">—</span></div>
+    <div class="stat-block"><span class="stat-label">Reine</span><span class="stat-value c-purple" id="st-queen">—</span></div>
+  </div>
+
+  <!-- MAIN -->
+  <div id="main">
+
+    <div id="sidepanel">
+      <div>
+        <div class="side-section-title">Joueurs</div>
+        <div class="player-card p1" id="pc-1">
+          <span class="pc-mark" id="pc-mark-1">⚪</span>
+          <span class="pc-body">
+            <span class="pc-name" id="pc-name-1">Joueur 1</span>
+            <span class="pc-sub"  id="pc-sub-1">Hôte</span>
+            <span class="pc-gain" id="pc-gain-1" style="display:none"></span>
+          </span>
+          <span class="pc-score" id="pc-score-1">0</span>
+        </div>
+        <div class="player-card p2" id="pc-2">
+          <span class="pc-mark" id="pc-mark-2">⚫</span>
+          <span class="pc-body">
+            <span class="pc-name" id="pc-name-2">Joueur 2</span>
+            <span class="pc-sub"  id="pc-sub-2">Invité</span>
+            <span class="pc-gain" id="pc-gain-2" style="display:none"></span>
+          </span>
+          <span class="pc-score" id="pc-score-2">0</span>
+        </div>
+        <div class="side-counter"><span class="sc-label">Matchs nuls</span><span class="sc-val" id="sc-draws">0</span></div>
+        <div class="side-counter"><span class="sc-label">Manches jouées</span><span class="sc-val" id="sc-rounds">0</span></div>
+        <div class="side-note">L'<b>hôte</b> joue les pions <b>blancs</b>, l'<b>invité</b> les <b>noirs</b>. Glissez depuis le palet vers l'arrière pour armer, relâchez pour tirer. L'orientation du plateau est propre à chaque écran : elle ne change rien pour l'adversaire.</div>
+      </div>
+
+      <div>
+        <div class="side-section-title">Discussion</div>
+        <div id="chat-box"></div>
+        <div id="chat-quick">
+          <button data-msg="Bien joué !">👏</button>
+          <button data-msg="Aïe…">😅</button>
+          <button data-msg="À toi !">👉</button>
+          <button data-msg="On refait une manche ?">🔁</button>
+          <button data-msg="Salut !">👋</button>
+        </div>
+        <div id="chat-form">
+          <input type="text" id="chat-input" maxlength="120" placeholder="Message…">
+          <button class="btn" id="chat-send">➤</button>
+        </div>
+      </div>
+
+    </div>
+
+    <div id="grid-area">
+      <div id="stage-wrap">
+        <canvas id="stage" class="stage" width="960" height="540"></canvas>
+        <div class="hud" id="hud">
+          <div class="hud-big" id="hud-big">🎮</div>
+          <div class="hud-sub" id="hud-sub"></div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- MODALE CONNEXION -->
+<div class="modal" id="net-modal">
+  <div class="modal-card">
+    <div class="modal-head">
+      <h2>🌐 Connexion des joueurs</h2>
+      <button class="modal-close" id="net-modal-close">✕</button>
+    </div>
+
+    <div id="net-step-choice">
+      <div class="field-row" style="margin-bottom:14px;">
+        <label for="inp-nick">Mon pseudo</label>
+        <input type="text" id="inp-nick" maxlength="14" value="Joueur 1" style="width:200px">
+      </div>
+      <div class="choice-grid">
+        <button class="choice" id="ch-host">
+          <span class="ch-ico">🎬</span>
+          <span><span class="ch-tit">Créer une partie</span><br><span class="ch-sub">Vous obtenez un code à partager. Vous jouez les pions BLANCS et commencez.</span></span>
+        </button>
+        <button class="choice" id="ch-join">
+          <span class="ch-ico">🔑</span>
+          <span><span class="ch-tit">Rejoindre une partie</span><br><span class="ch-sub">Saisissez le code reçu. Vous jouez les pions NOIRS.</span></span>
+        </button>
+        <button class="choice" id="ch-local">
+          <span class="ch-ico">🪑</span>
+          <span><span class="ch-tit">Jouer en local</span><br><span class="ch-sub">Les deux joueurs se partagent le même écran, sans connexion.</span></span>
+        </button>
+      </div>
+      <p style="margin-top:12px;">La connexion est <strong>directe entre les deux navigateurs</strong> (WebRTC / PeerJS) : aucune donnée de partie ne transite par un serveur, seul l'annuaire public PeerJS sert à la mise en relation.</p>
+    </div>
+
+    <div id="net-step-file" style="display:none;">
+      <div class="note">📁 Ce jeu a été ouvert <strong>directement depuis un fichier</strong> (<code>file://</code>).
+        La partie en ligne fonctionne dans ce mode, mais avec quatre contraintes.</div>
+      <ul class="constraints">
+        <li>Votre adversaire doit posséder <strong>le même fichier de jeu sur son propre poste</strong> :
+          rien n'est téléchargé depuis Internet, chacun ouvre sa copie.</li>
+        <li>Le <strong>lien d'invitation ne servira à rien</strong> : il désigne un emplacement sur votre
+          disque. Transmettez uniquement le <strong>code à 5 caractères</strong>.</li>
+        <li>Les <strong>records et le réglage du son</strong> peuvent ne pas être conservés d'une fois sur l'autre.</li>
+        <li><strong>Safari</strong> refuse parfois la connexion dans ce mode ; Chrome, Edge et Firefox l'acceptent.</li>
+      </ul>
+      <p>Pour s'affranchir de tout cela : publiez le dossier (GitHub Pages, Netlify…) ou lancez un serveur
+        local, puis rejoignez-vous par une adresse <code>https://…</code>.</p>
+      <div class="overlay-buttons">
+        <button class="btn primary" id="file-ok">✅ J'ai compris, continuer</button>
+        <button class="btn" id="file-cancel">↩ Annuler</button>
+      </div>
+    </div>
+
+    <div id="net-step-host" style="display:none;">
+      <p>Transmettez ce code (ou le lien) à votre adversaire :</p>
+      <div class="big-code" id="host-code">·····</div>
+      <div class="share-link">
+        <input type="text" id="host-link" readonly>
+        <button class="btn btn-net" id="btn-copy-link2">🔗 Copier</button>
+      </div>
+      <div class="note blue" id="host-status">⏳ En attente de connexion de l'adversaire…</div>
+      <div class="overlay-buttons">
+        <button class="btn" id="host-back">↩ Retour</button>
+      </div>
+    </div>
+
+    <div id="net-step-join" style="display:none;">
+      <p>Saisissez le code communiqué par l'hôte :</p>
+      <div style="display:flex;justify-content:center;">
+        <input type="text" id="join-code" class="code-input" maxlength="5" placeholder="ABCDE">
+      </div>
+      <div class="note blue" id="join-status" style="display:none;"></div>
+      <div class="overlay-buttons">
+        <button class="btn primary" id="btn-do-join">🔌 Se connecter</button>
+        <button class="btn" id="join-back">↩ Retour</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- MODALE AIDE -->
+<div class="modal" id="aide-modal">
+  <div class="modal-card">
+    <div class="modal-head">
+      <h2>🎮 Comment jouer — Carrom</h2>
+      <button class="modal-close" id="btn-aide-close">✕</button>
+    </div>
+    <ol class="help">
+      <li><strong>But :</strong> empocher ses neuf pions dans les quatre trous avant l'adversaire. L'hôte joue les <strong>blancs</strong> et tire depuis la ligne du <strong>bas</strong> ; l'invité joue les <strong>noirs</strong> depuis la ligne du <strong>haut</strong>.</li>
+      <li><strong>Tirer :</strong> glissez <em>depuis le palet bleu vers l'arrière</em>, comme un lance-pierre : la direction est l'inverse de votre glissé et la longueur donne la puissance. Une <strong>règle graduée</strong> s'affiche dans la bande <em>sous</em> le plateau pendant la visée, avec le pourcentage exact et une couleur qui passe du vert au rouge. Relâchez pour tirer.</li>
+      <li><strong>Puissance :</strong> quatre crans dans le bandeau, de <em>douce</em> à <em>très forte</em>. Le pourcentage de la règle s'applique à la puissance choisie : 60 % en « très forte » frappe bien plus fort que 60 % en « douce ».</li>
+      <li><strong>Placer le palet :</strong> cliquez ou glissez près de votre ligne de base pour le déplacer entre les deux pastilles rouges ; les flèches <strong>←</strong> et <strong>→</strong> font la même chose.</li>
+      <li><strong>Rejouer :</strong> tout coup qui empoche au moins un de vos pions vous rend la main. Sinon, le tour passe à l'adversaire.</li>
+      <li><strong>Pion adverse empoché :</strong> il est compté pour l'adversaire, et vous perdez la main.</li>
+      <li><strong>Faute :</strong> si le palet tombe dans un trou, un de vos pions déjà empochés revient au centre et le tour passe.</li>
+      <li><strong>La reine (le pion rouge) :</strong> après l'avoir empochée, il faut la <em>couvrir</em> — rentrer un de vos pions dans le même coup ou le suivant. Sans cela, elle retourne au centre. Couverte, elle vaut <strong>3 points</strong> en fin de manche.</li>
+      <li><strong>Fin de manche :</strong> le premier à n'avoir plus aucun pion sur le plateau l'emporte. Le score des manches est cumulé en haut à gauche.</li>
+      <li><strong>Orientation du plateau :</strong> la liste <em>Ma ligne de base</em> place votre côté <strong>en bas, à gauche, en haut ou à droite</strong> de votre écran. Ce choix est <strong>purement local</strong> : la partie reste dans le même repère, seuls l'affichage et la saisie tournent — chacun peut donc s'installer comme il veut, y compris autour d'une tablette posée à plat.</li>
+      <li><strong>Mode entraînement :</strong> un seul joueur, qui cherche à rentrer ses neuf pions blancs en un minimum de coups. Un pion noir empoché retourne au centre, et le meilleur total est conservé sur l'appareil.</li>
+      <li><strong>Sous le capot :</strong> seul le tir circule sur le réseau — position et vitesse du palet, arrondies. Les deux postes déroulent ensuite la même physique, qui n'emploie que des opérations arithmétiques exactement reproductibles, et l'hôte renvoie un état complet une fois les pièces immobiles.</li>
+    </ol>
+    <p style="font-size:.85rem;line-height:1.6;color:#1e293b;margin-top:2px;"><strong>Boutons communs du bandeau :</strong>
+      <b>📜 Historique</b> ouvre le relevé de la partie, que l'on peut imprimer ; il est aussi accessible depuis la fenêtre
+      de fin de manche. <b>🔊 Son</b> coupe ou rétablit les effets sonores, et le choix est mémorisé.
+      <b>⛶ Plein écran</b> agrandit le jeu à tout l’écran, ce qui écarte les info-bulles de la barre des tâches ; rien n’est modifié durablement, la touche Échap ou le même bouton rétablissent la fenêtre.
+      <b>⟲ Réinitialiser</b> arrête la partie en cours sans quitter la page. <b>✕ Quitter</b> revient au menu.</p>
+    <div class="note blue">🌐 Le jeu en ligne fonctionne aussi <strong>par simple double-clic</strong> (<em>file://</em>) : le jeu demande alors votre accord et rappelle les contraintes — chacun doit avoir le même fichier de jeu, et seul le code à 5 caractères circule. Servir la page en <strong>HTTPS</strong> (GitHub Pages, Netlify, Vercel…) lève ces limites et permet d'envoyer un simple lien d'invitation.</div>
+    <button class="btn primary" id="btn-aide-ok" style="align-self:center;">OK</button>
+  </div>
+</div>
+
+<!-- MODALE HISTORIQUE -->
+<div class="modal" id="hist-modal">
+  <div class="modal-card">
+    <div class="modal-head">
+      <h2>📜 Historique — Coups joués</h2>
+      <button class="modal-close" id="hist-close">✕</button>
+    </div>
+    <div id="hist-players"></div>
+    <div id="history-list"></div>
+    <div id="hist-empty">Aucun coup enregistré pour l'instant.</div>
+    <div class="overlay-buttons">
+      <button class="btn btn-net" id="hist-print">🖨 Imprimer</button>
+      <button class="btn primary" id="hist-ok">Fermer</button>
+    </div>
+  </div>
+</div>
+
+<!-- OVERLAY FIN DE MANCHE -->
+<div class="modal" id="overlay">
+  <div class="modal-card" id="ov-card">
+    <h2 id="ov-title">🎉 Victoire !</h2>
+    <div class="overlay-stats" id="ov-stats"></div>
+    <span id="ov-wait">⏳ En attente de l'hôte pour la manche suivante…</span>
+    <div class="overlay-buttons">
+      <button class="btn primary" id="ov-next">▶ Manche suivante</button>
+      <button class="btn" id="ov-hist">📜 Historique de la manche</button>
+      <button class="btn btn-net" id="ov-ask">🙋 Demander une revanche</button>
+      <button class="btn" id="ov-close">👁 Revenir à l'écran</button>
+    </div>
+  </div>
+</div>
+
+<script src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js"></script>
+<script>
+(function () {
+  "use strict";
+
+  /* ══════════════════════════════════════════════════════════════════════
+     NOYAU COMMUN — réseau P2P (PeerJS), discussion, bandeaux, modales
+     Identique dans les quatre jeux : seule la partie « MODULE DE JEU »
+     change d'un fichier à l'autre.
+     ══════════════════════════════════════════════════════════════════════ */
+
+  /* ── Chargement de PeerJS, avec CDN de secours ── */
+  const CDNS = [
+    "https://cdnjs.cloudflare.com/ajax/libs/peerjs/1.5.4/peerjs.min.js",
+    "https://cdn.jsdelivr.net/npm/peerjs@1.5.4/dist/peerjs.min.js"
+  ];
+  function ensurePeer() {
+    if (window.Peer) return Promise.resolve(true);
+    return CDNS.reduce((chain, url) => chain.then((ok) => ok ? true : new Promise((res) => {
+      const s = document.createElement("script");
+      s.src = url;
+      s.onload = () => res(!!window.Peer);
+      s.onerror = () => res(false);
+      document.head.appendChild(s);
+    })), Promise.resolve(false));
+  }
+
+  /* ── Utilitaires ── */
+  const $ = (id) => document.getElementById(id);
+  const ALPHA = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";   // sans I, O, 0, 1 (ambigus)
+  const pad2 = (x) => String(x).padStart(2, "0");
+  const fmtTime = (ms) => { const s = Math.floor(ms / 1000); return pad2(Math.floor(s / 60)) + ":" + pad2(s % 60); };
+  function makeCode() { let s = ""; for (let i = 0; i < 5; i++) s += ALPHA[Math.floor(Math.random() * ALPHA.length)]; return s; }
+  function escapeHtml(s) { return String(s).replace(/[&<>"']/g, (m) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[m])); }
+  function clamp(v, a, b) { return v < a ? a : (v > b ? b : v); }
+
+  /* ── Générateur pseudo-aléatoire déterministe (mulberry32) ──
+     Contrat : même graine ⇒ même séquence, sur toutes les machines. */
+  function mulberry32(a) {
+    a = a >>> 0;
+    return function () {
+      a |= 0; a = (a + 0x6D2B79F5) | 0;
+      let t = Math.imul(a ^ (a >>> 15), 1 | a);
+      t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+      return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+    };
+  }
+
+
+  /* ══════════ SON (synthèse WebAudio, aucun fichier externe) ══════════ */
+  const SND = { on: true, ctx: null };
+  try { SND.on = localStorage.getItem("jeux2.sound") !== "0"; } catch (e) {}
+  function actx() {
+    if (!SND.ctx) { try { SND.ctx = new (window.AudioContext || window.webkitAudioContext)(); } catch (e) { SND.ctx = null; } }
+    return SND.ctx;
+  }
+  function tone(f, dur, type, gain, delay) {
+    const c = actx(); if (!c) return;
+    if (c.state === "suspended") { try { c.resume(); } catch (e) {} }
+    const t0 = c.currentTime + (delay || 0), d = dur || 0.12;
+    const o = c.createOscillator(), g = c.createGain();
+    o.type = type || "triangle";
+    o.frequency.setValueAtTime(f, t0);
+    g.gain.setValueAtTime(0.0001, t0);
+    g.gain.exponentialRampToValueAtTime(gain || 0.16, t0 + 0.012);
+    g.gain.exponentialRampToValueAtTime(0.0001, t0 + d);
+    o.connect(g); g.connect(c.destination);
+    o.start(t0); o.stop(t0 + d + 0.03);
+  }
+  function snd(name) {
+    if (!SND.on) return;
+    switch (name) {
+      case "click":   tone(520, .07, "square", .11); break;
+      case "drop":    tone(760, .06, "sine", .09); break;
+      case "capture": tone(660, .09, "triangle", .15); tone(880, .10, "triangle", .15, .08); tone(1180, .14, "triangle", .13, .16); break;
+      case "error":   tone(180, .16, "sawtooth", .11); break;
+      case "flap":    tone(620, .06, "square", .09); break;
+      case "pass":    tone(960, .06, "sine", .09); break;
+      case "jump":    tone(500, .08, "square", .09); break;
+      case "point":   tone(880, .10, "square", .13); tone(1240, .12, "square", .11, .09); break;
+      case "bounce":  tone(420, .05, "square", .09); break;
+      case "crash":   tone(300, .18, "sawtooth", .16); tone(140, .30, "sawtooth", .14, .10); break;
+      case "count":   tone(700, .10, "sine", .11); break;
+      case "go":      tone(1000, .18, "sine", .15); break;
+      case "win":     [523, 659, 784, 1047].forEach((f, i) => tone(f, .18, "triangle", .15, i * .11)); break;
+      case "lose":    [523, 415, 330, 262].forEach((f, i) => tone(f, .20, "triangle", .13, i * .12)); break;
+      case "join":    tone(660, .10, "sine", .13); tone(990, .12, "sine", .11, .10); break;
+    }
+  }
+  function toggleSound() {
+    SND.on = !SND.on;
+    try { localStorage.setItem("jeux2.sound", SND.on ? "1" : "0"); } catch (e) {}
+    renderSound();
+    if (SND.on) snd("click");
+  }
+  function renderSound() {
+    const b = $("btn-sound"); if (!b) return;
+    b.textContent = SND.on ? "🔊 Son" : "🔇 Muet";
+    b.classList.toggle("danger", !SND.on);
+  }
+
+  /* ── État partagé ── */
+  const S = { names: ["Joueur 1", "Joueur 2"], scores: [0, 0], rounds: 0, draws: 0, elapsed: 0, t0: 0 };
+  const NET = {
+    mode: "local",            // 'local' | 'host' | 'guest'
+    peer: null, conn: null, code: null,
+    connected: false, myRole: 1, ping: null, pingTimer: null
+  };
+  const GAME = {};            // rempli par le module de jeu
+
+  /* ── Message de validation (bandeau) ── */
+  function msg(text, info) {
+    const el = $("val-msg");
+    if (!text) { el.classList.remove("visible"); return; }
+    el.textContent = (info ? "ℹ " : "⚠ ") + text;
+    el.classList.toggle("info", !!info);
+    el.classList.add("visible");
+    clearTimeout(msg._t);
+    msg._t = setTimeout(() => el.classList.remove("visible"), 5000);
+  }
+  function setStat(id, v) { const e = $(id); if (e) e.textContent = v; }
+  /* Gains en cours de manche, affichés sous le nom de chaque joueur */
+  function setGain(p, txt) {
+    const e = $("pc-gain-" + p); if (!e) return;
+    e.textContent = txt || "";
+    e.style.display = txt ? "block" : "none";
+  }
+
+  /* ── Chronomètre ── */
+  let timerId = null;
+  function startTimer() {
+    stopTimer();
+    S.t0 = Date.now() - S.elapsed;
+    timerId = setInterval(() => { S.elapsed = Date.now() - S.t0; setStat("st-time", fmtTime(S.elapsed)); }, 250);
+  }
+  function stopTimer() { if (timerId) { clearInterval(timerId); timerId = null; } }
+  function resetTimer() { stopTimer(); S.elapsed = 0; setStat("st-time", "00:00"); }
+
+  /* ── Discussion ── */
+  function addChat(who, text, sys) {
+    const box = $("chat-box");
+    const d = document.createElement("div");
+    d.className = "chat-msg" + (sys ? " sys" : "");
+    d.innerHTML = sys ? text : "<b>" + escapeHtml(who) + "</b> " + escapeHtml(text);
+    box.appendChild(d);
+    box.scrollTop = box.scrollHeight;
+    while (box.children.length > 60) box.removeChild(box.firstChild);
+  }
+  function sendChat(text) {
+    text = (text || "").trim();
+    if (!text) return;
+    if (NET.mode === "local" || !NET.connected) { msg("La discussion nécessite une partie en ligne connectée."); return; }
+    addChat(S.names[NET.myRole - 1] + " (vous)", text);
+    send({ t: "chat", text: text });
+  }
+
+  /* ── Historique ── */
+  function addHist(num, label, right) {
+    const list = $("history-list"); if (!list) return;
+    const d = document.createElement("div");
+    d.className = "hist-item";
+    d.innerHTML = '<span class="hi-num">' + num + '</span><span>' + label + '</span><span class="hi-pos">' + (right || "") + '</span>';
+    list.appendChild(d);
+    list.scrollTop = list.scrollHeight;
+    while (list.children.length > 80) list.removeChild(list.firstChild);
+  }
+  function clearHist() { const l = $("history-list"); if (l) l.innerHTML = ""; }
+
+  function openHist() {
+    const list = $("history-list");
+    const solo = !!(GAME.solo && GAME.solo());
+    $("hist-players").textContent = solo
+      ? S.names[0] + " — partie solo"
+      : "🔵 " + S.names[0] + "  contre  🔴 " + S.names[1];
+    $("hist-empty").style.display = list.children.length ? "none" : "block";
+    $("hist-modal").classList.add("show");
+  }
+  function closeHist() { $("hist-modal").classList.remove("show"); }
+  function printHistory() {
+    const rows = Array.from(document.querySelectorAll("#history-list .hist-item")).map((el) => {
+      const c = el.children;
+      return "<tr>" + Array.from(c).map((s) => "<td>" + escapeHtml(s.textContent) + "</td>").join("") + "</tr>";
+    }).join("");
+    const titre = document.title.split("—")[0].trim();
+    const w = window.open("", "_blank", "width=720,height=820");
+    if (!w) { msg("Le navigateur a bloqué la fenêtre d'impression."); return; }
+    w.document.write('<!DOCTYPE html><html lang="fr"><head><meta charset="utf-8"><title>Historique — ' + titre +
+      '</title><style>body{font-family:Segoe UI,Arial,sans-serif;color:#06283d;padding:26px}' +
+      'h1{font-size:1.25rem;margin:0 0 4px}p{font-size:.85rem;color:#0a5b80;margin:0 0 14px}' +
+      'table{border-collapse:collapse;width:100%;font-size:.85rem}' +
+      'td,th{border:1px solid #7dd3f0;padding:5px 9px;text-align:left}th{background:#e0f6ff}</style></head><body>' +
+      "<h1>" + titre + " — historique de la partie</h1><p>" +
+      escapeHtml($("hist-players").textContent) + " — " + new Date().toLocaleString("fr-FR") +
+      "</p><table>" + (rows || "<tr><td>Aucun coup enregistré.</td></tr>") + "</table></body></html>");
+    w.document.close(); w.focus();
+    setTimeout(() => { try { w.print(); } catch (e) {} }, 350);
+  }
+
+
+  /* ── Envoi réseau ── */
+  function send(obj) { try { if (NET.conn && NET.conn.open) NET.conn.send(obj); } catch (e) { /* ignore */ } }
+
+  /* ── Rendus communs ── */
+  function renderPlayers() {
+    $("pc-name-1").textContent = S.names[0] + (NET.mode !== "local" && NET.myRole === 1 ? " (vous)" : "");
+    $("pc-name-2").textContent = S.names[1] + (NET.mode !== "local" && NET.myRole === 2 ? " (vous)" : "");
+    $("pc-sub-1").textContent = NET.mode === "local" ? "Local" : "Hôte";
+    $("pc-sub-2").textContent = NET.mode === "local" ? "Local" : (NET.connected ? "Invité — connecté" : "Invité — hors ligne");
+    $("pc-score-1").textContent = S.scores[0];
+    $("pc-score-2").textContent = S.scores[1];
+    const d = $("sc-draws"), r = $("sc-rounds");
+    if (d) d.textContent = S.draws;
+    if (r) r.textContent = S.rounds;
+    const isGuest = NET.mode === "guest";
+    const solo = !!(GAME.solo && GAME.solo());
+    $("btn-start").disabled = !solo && (isGuest || (NET.mode === "host" && !NET.connected));
+    $("chat-input").disabled = NET.mode === "local";
+    $("chat-send").disabled = NET.mode === "local";
+  }
+  function renderNet() {
+    const dot = $("net-dot"), txt = $("net-text");
+    dot.className = "dot";
+    $("net-code-wrap").style.display = NET.mode === "local" ? "none" : "inline";
+    $("btn-copy-link").style.display = NET.mode === "host" ? "inline-flex" : "none";
+    $("net-code").textContent = NET.code || "-----";
+    if (NET.mode === "local") {
+      txt.textContent = "Mode local — les deux joueurs jouent sur cet écran";
+    } else if (NET.connected) {
+      dot.classList.add("on");
+      txt.textContent = (NET.mode === "host" ? "Hôte" : "Invité") + " — connecté à " + S.names[NET.myRole === 1 ? 1 : 0];
+    } else {
+      dot.classList.add(NET.mode === "host" ? "wait" : "off");
+      txt.textContent = NET.mode === "host" ? "En attente de connexion de l'adversaire…" : "Déconnecté de l'hôte";
+    }
+    $("net-ping").textContent = NET.connected && NET.ping != null ? "latence " + NET.ping + " ms" : "";
+  }
+  function renderCommon() { renderPlayers(); renderNet(); if (GAME.render) GAME.render(); }
+
+  /* ── Overlay de fin de manche ── */
+  function showOverlay(o) {
+    $("ov-title").textContent = o.title || "";
+    $("ov-title").className = o.cls || "";
+    const st = $("ov-stats");
+    st.innerHTML = (o.stats || []).map((s) =>
+      '<div class="ov-stat"><span class="ov-stat-val">' + s[0] + '</span><span class="ov-stat-lbl">' + s[1] + '</span></div>').join("");
+    st.style.display = (o.stats && o.stats.length) ? "flex" : "none";
+    const guest = NET.mode === "guest" && !(GAME.solo && GAME.solo());
+    $("ov-wait").style.display = guest ? "block" : "none";
+    $("ov-next").style.display = guest ? "none" : "inline-flex";
+    $("ov-next").textContent = o.nextLabel || "▶ Manche suivante";
+    $("ov-ask").style.display = guest && NET.connected ? "inline-flex" : "none";
+    $("overlay").classList.add("show");
+  }
+  function hideOverlay() { $("overlay").classList.remove("show"); }
+
+  /* ── Réception des messages ── */
+  function handleData(d) {
+    if (!d || typeof d !== "object") return;
+    switch (d.t) {
+      case "join":                                    // hôte : l'invité se présente
+        S.names[1] = (d.name || "Joueur 2").slice(0, 14);
+        NET.connected = true;
+        addChat("", "🔌 <b>" + escapeHtml(S.names[1]) + "</b> a rejoint la partie.", true);
+        snd("join");
+        send({ t: "welcome", names: S.names });
+        renderCommon();
+        if (GAME.onConnected) GAME.onConnected();
+        msg(S.names[1] + " a rejoint la partie. Vous pouvez lancer la manche !", true);
+        break;
+      case "welcome":                                 // invité : accueil de l'hôte
+        S.names = d.names; NET.myRole = 2; NET.connected = true;
+        $("inp-me").value = S.names[1];
+        addChat("", "🔌 Connecté à <b>" + escapeHtml(S.names[0]) + "</b>.", true);
+        snd("join");
+        renderCommon();
+        if (GAME.onConnected) GAME.onConnected();
+        break;
+      case "chat":
+        addChat(S.names[NET.myRole === 1 ? 1 : 0], d.text);
+        break;
+      case "rematch":
+        msg(S.names[1] + " demande une nouvelle manche.", true);
+        addChat("", "🔁 <b>" + escapeHtml(S.names[1]) + "</b> demande une revanche.", true);
+        break;
+      case "ping": send({ t: "pong", ts: d.ts }); break;
+      case "pong": NET.ping = Date.now() - d.ts; renderNet(); break;
+      case "bye":
+        NET.connected = false;
+        addChat("", "👋 L'adversaire a quitté la partie.", true);
+        if (GAME.onDisconnected) GAME.onDisconnected();
+        renderCommon();
+        break;
+      default:
+        if (GAME.onData) GAME.onData(d);
+    }
+  }
+
+  function wireConn(conn) {
+    NET.conn = conn;
+    conn.on("data", handleData);
+    conn.on("close", () => {
+      NET.connected = false; NET.ping = null;
+      addChat("", "⚠️ Connexion interrompue.", true);
+      msg("Connexion avec l'adversaire interrompue.");
+      if (GAME.onDisconnected) GAME.onDisconnected();
+      renderCommon();
+    });
+    conn.on("error", () => { msg("Erreur de connexion P2P."); });
+    if (NET.pingTimer) clearInterval(NET.pingTimer);
+    NET.pingTimer = setInterval(() => { if (NET.connected) send({ t: "ping", ts: Date.now() }); }, 4000);
+  }
+
+  /* ── Hôte ── */
+  function hostGame() {
+    ensurePeer().then((ok) => {
+      if (!ok) { $("host-status").textContent = "❌ Impossible de charger PeerJS (vérifiez votre connexion Internet)."; return; }
+      cleanupPeer();
+      NET.mode = "host"; NET.myRole = 1; NET.connected = false;
+      NET.code = makeCode();
+      S.names[0] = ($("inp-nick").value || "Joueur 1").trim().slice(0, 14) || "Joueur 1";
+      S.names[1] = "Joueur 2";
+      $("inp-me").value = S.names[0];
+
+      $("net-step-choice").style.display = "none";
+      $("net-step-host").style.display = "block";
+      $("host-code").textContent = NET.code;
+      $("host-link").value = shareLink(NET.code);
+      $("host-status").textContent = "⏳ Création de la salle…";
+
+      NET.peer = new Peer(GAME.prefix + NET.code.toLowerCase(), { debug: 1 });
+      NET.peer.on("open", () => { $("host-status").textContent = "⏳ En attente de connexion de l'adversaire…"; renderCommon(); });
+      NET.peer.on("connection", (conn) => {
+        if (NET.conn && NET.conn.open) { conn.close(); return; }      // un seul adversaire
+        wireConn(conn);
+        conn.on("open", () => {
+          $("host-status").textContent = "✅ Adversaire connecté !";
+          setTimeout(() => $("net-modal").classList.remove("show"), 900);
+        });
+      });
+      NET.peer.on("error", (err) => {
+        if (err && err.type === "unavailable-id") {
+          $("host-status").textContent = "Code déjà utilisé, nouveau code en cours…";
+          setTimeout(hostGame, 300);
+        } else {
+          $("host-status").textContent = "❌ Erreur réseau : " + (err && err.type ? err.type : "inconnue");
+        }
+      });
+      if (GAME.onModeChange) GAME.onModeChange();
+      renderCommon();
+    });
+  }
+
+  /* ── Invité ── */
+  function joinGame(code) {
+    code = (code || "").trim().toUpperCase();
+    if (code.length !== 5) { showJoinStatus("❌ Le code doit comporter 5 caractères."); return; }
+    ensurePeer().then((ok) => {
+      if (!ok) { showJoinStatus("❌ Impossible de charger PeerJS (vérifiez votre connexion Internet)."); return; }
+      cleanupPeer();
+      NET.mode = "guest"; NET.myRole = 2; NET.connected = false; NET.code = code;
+      S.names[1] = ($("inp-nick").value || "Joueur 2").trim().slice(0, 14) || "Joueur 2";
+      $("inp-me").value = S.names[1];
+      showJoinStatus("⏳ Connexion à la salle " + code + "…");
+
+      NET.peer = new Peer({ debug: 1 });
+      NET.peer.on("open", () => {
+        const conn = NET.peer.connect(GAME.prefix + code.toLowerCase(), { reliable: true });
+        wireConn(conn);
+        conn.on("open", () => {
+          send({ t: "join", name: S.names[1] });
+          showJoinStatus("✅ Connecté ! La partie est pilotée par l'hôte.");
+          setTimeout(() => $("net-modal").classList.remove("show"), 900);
+          renderCommon();
+        });
+        conn.on("error", () => showJoinStatus("❌ Connexion impossible. Vérifiez le code."));
+        setTimeout(() => { if (!NET.connected) showJoinStatus("❌ Aucune réponse : code invalide ou hôte hors ligne."); }, 12000);
+      });
+      NET.peer.on("error", (err) => {
+        const type = err && err.type ? err.type : "inconnue";
+        showJoinStatus(type === "peer-unavailable" ? "❌ Salle introuvable : vérifiez le code." : "❌ Erreur réseau : " + type);
+      });
+      if (GAME.onModeChange) GAME.onModeChange();
+      renderCommon();
+    });
+  }
+  function showJoinStatus(t) { const el = $("join-status"); el.style.display = "block"; el.textContent = t; }
+
+  /* ── Local ── */
+  function goLocal() {
+    cleanupPeer();
+    NET.mode = "local"; NET.myRole = 1; NET.connected = false; NET.code = null; NET.ping = null;
+    S.names = [($("inp-nick").value || "Joueur 1").trim().slice(0, 14) || "Joueur 1", "Joueur 2"];
+    $("inp-me").value = S.names[0];
+    $("net-modal").classList.remove("show");
+    if (GAME.onModeChange) GAME.onModeChange();
+    renderCommon();
+  }
+
+  function cleanupPeer() {
+    if (NET.pingTimer) { clearInterval(NET.pingTimer); NET.pingTimer = null; }
+    try { if (NET.conn && NET.conn.open) { send({ t: "bye" }); NET.conn.close(); } } catch (e) {}
+    try { if (NET.peer) NET.peer.destroy(); } catch (e) {}
+    NET.conn = null; NET.peer = null; NET.connected = false; NET.ping = null;
+  }
+  window.addEventListener("beforeunload", cleanupPeer);
+
+  function shareLink(code) { return location.origin + location.pathname + "?room=" + code; }
+  function copy(text, okMsg) {
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(text).then(() => msg(okMsg, true), () => msg("Copie impossible : sélectionnez le texte manuellement."));
+    } else msg("Copie impossible : sélectionnez le texte manuellement.");
+  }
+
+  /* ── Câblage des événements communs ── */
+  function wireCore() {
+    $("btn-start").addEventListener("click", () => {
+      if (NET.mode === "guest") { msg("Seul l'hôte peut lancer une manche."); return; }
+      if (NET.mode === "host" && !NET.connected) { msg("Attendez la connexion de votre adversaire."); return; }
+      hideOverlay();
+      if (GAME.onStart) GAME.onStart();
+    });
+    $("btn-reset").addEventListener("click", () => { if (GAME.onQuit) GAME.onQuit(); snd("click"); });
+    $("btn-quit").addEventListener("click", () => { cleanupPeer(); location.href = "index.html"; });
+    $("btn-sound").addEventListener("click", toggleSound);
+    $("btn-hist").addEventListener("click", openHist);
+    $("hist-close").addEventListener("click", closeHist);
+    $("hist-ok").addEventListener("click", closeHist);
+    $("hist-print").addEventListener("click", printHistory);
+    $("ov-hist").addEventListener("click", openHist);
+
+    $("btn-connect").addEventListener("click", () => {
+      $("net-step-choice").style.display = "block";
+      $("net-step-host").style.display = "none";
+      $("net-step-join").style.display = "none";
+      $("join-status").style.display = "none";
+      $("net-modal").classList.add("show");
+    });
+    $("net-modal-close").addEventListener("click", () => $("net-modal").classList.remove("show"));
+    $("ch-host").addEventListener("click", hostGame);
+    $("ch-join").addEventListener("click", () => {
+      $("net-step-choice").style.display = "none";
+      $("net-step-join").style.display = "block";
+      $("join-code").focus();
+    });
+    $("ch-local").addEventListener("click", goLocal);
+    $("host-back").addEventListener("click", () => { cleanupPeer(); NET.mode = "local"; NET.code = null; $("net-step-host").style.display = "none"; $("net-step-choice").style.display = "block"; renderCommon(); });
+    $("join-back").addEventListener("click", () => { cleanupPeer(); NET.mode = "local"; NET.code = null; $("net-step-join").style.display = "none"; $("net-step-choice").style.display = "block"; renderCommon(); });
+    $("btn-do-join").addEventListener("click", () => joinGame($("join-code").value));
+    $("join-code").addEventListener("keydown", (e) => { if (e.key === "Enter") joinGame($("join-code").value); });
+    $("join-code").addEventListener("input", (e) => { e.target.value = e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, ""); });
+    $("btn-copy-link").addEventListener("click", () => copy(shareLink(NET.code), "Lien d'invitation copié."));
+    $("btn-copy-link2").addEventListener("click", () => copy($("host-link").value, "Lien d'invitation copié."));
+
+    $("btn-aide-toggle").addEventListener("click", () => $("aide-modal").classList.add("show"));
+    $("btn-aide-close").addEventListener("click", () => $("aide-modal").classList.remove("show"));
+    $("btn-aide-ok").addEventListener("click", () => $("aide-modal").classList.remove("show"));
+
+    $("ov-next").addEventListener("click", () => { hideOverlay(); if (NET.mode !== "guest" && GAME.onNext) GAME.onNext(); });
+    $("ov-ask").addEventListener("click", () => { send({ t: "rematch" }); msg("Demande de revanche envoyée à l'hôte.", true); });
+    $("ov-close").addEventListener("click", hideOverlay);
+
+    $("chat-send").addEventListener("click", () => { sendChat($("chat-input").value); $("chat-input").value = ""; });
+    $("chat-input").addEventListener("keydown", (e) => { e.stopPropagation(); if (e.key === "Enter") { sendChat($("chat-input").value); $("chat-input").value = ""; } });
+    document.querySelectorAll("#chat-quick button").forEach((b) => b.addEventListener("click", () => sendChat(b.dataset.msg)));
+
+    $("inp-me").addEventListener("input", () => {
+      const v = ($("inp-me").value || "Joueur").slice(0, 14);
+      if (NET.mode === "guest") S.names[1] = v; else S.names[0] = v;
+      $("inp-nick").value = v;
+      if (NET.mode === "host" && NET.connected) send({ t: "welcome", names: S.names });
+      if (NET.mode === "guest" && NET.connected) send({ t: "chat", text: "(je me renomme « " + v + " »)" });
+      renderCommon();
+    });
+
+    document.addEventListener("keydown", (e) => {
+      if (e.key === "Escape") document.querySelectorAll(".modal.show").forEach((m) => m.classList.remove("show"));
+    });
+
+
+    /* ── Menu contextuel du navigateur ──
+       Un clic droit sur le plateau ou la scène ouvrait le menu « Ouvrir dans un
+       nouvel onglet / Enregistrer l'image… », gênant en cours de partie. On le
+       neutralise partout, SAUF là où il reste utile : champs de saisie (copier,
+       coller), code de la salle, lien d'invitation, messages et historique. */
+    document.addEventListener("contextmenu", function (e) {
+      var t = e.target;
+      if (t && t.closest && t.closest("input, textarea, .code-pill, .big-code, .chat-msg, #hist-modal, #history-list")) return;
+      e.preventDefault();
+    });
+
+
+    /* ── Ouverture depuis un fichier : autorisation explicite ──
+       En file://, la mise en relation fonctionne (le schéma « file » est
+       réputé digne de confiance), mais les contraintes ne sont pas les
+       mêmes qu'en ligne. On les expose et on demande l'accord avant de
+       créer ou de rejoindre une partie. */
+    var FILEMODE = location.protocol === "file:";
+    var fileOk = false, filePending = null;
+    document.addEventListener("click", function (e) {
+      if (!FILEMODE || fileOk) return;
+      var b = e.target && e.target.closest ? e.target.closest("#ch-host, #ch-join") : null;
+      if (!b) return;
+      e.preventDefault(); e.stopPropagation();
+      filePending = b.id;
+      $("net-step-choice").style.display = "none";
+      $("net-step-host").style.display = "none";
+      $("net-step-join").style.display = "none";
+      $("net-step-file").style.display = "block";
+    }, true);
+    $("file-ok").addEventListener("click", function () {
+      fileOk = true;
+      $("net-step-file").style.display = "none";
+      $("net-step-choice").style.display = "block";
+      var b = filePending ? $(filePending) : null;
+      if (b) b.click();
+    });
+    $("file-cancel").addEventListener("click", function () {
+      $("net-step-file").style.display = "none";
+      $("net-step-choice").style.display = "block";
+    });
+
+    /* ── Plein écran ──
+       Utile quand la fenêtre touche le bas de l'écran : les info-bulles de
+       la barre des tâches n'ont plus de raison d'apparaître. Rien n'est
+       modifié durablement : Échap ou le même bouton rétablissent tout. */
+    function fsOn() { return !!(document.fullscreenElement || document.webkitFullscreenElement); }
+    function renderFs() { var b = $("btn-full"); if (b) b.textContent = fsOn() ? "⛶ Fenêtre" : "⛶ Plein écran"; }
+    function toggleFs() {
+      try {
+        if (fsOn()) { (document.exitFullscreen || document.webkitExitFullscreen).call(document); }
+        else {
+          var e = document.documentElement;
+          (e.requestFullscreen || e.webkitRequestFullscreen).call(e);
+        }
+      } catch (err) { msg("Le plein écran a été refusé par le navigateur."); }
+    }
+    if ($("btn-full")) $("btn-full").addEventListener("click", toggleFs);
+    document.addEventListener("fullscreenchange", renderFs);
+    document.addEventListener("webkitfullscreenchange", renderFs);
+    renderFs();
+
+
+    /* Pseudo par défaut de l'invité : sans cela les deux joueurs
+       s'appellent « Joueur 1 » et l'affichage devient illisible. */
+    if ($("ch-join")) $("ch-join").addEventListener("click", function () {
+      var n = $("inp-nick");
+      if (n && (!n.value || n.value.trim() === "Joueur 1")) n.value = "Joueur 2";
+    });
+
+    /* ── En file://, le lien d'invitation ne mène nulle part : on le masque ── */
+    if (location.protocol === "file:") {
+      var stl = document.createElement("style");
+      stl.textContent = ".share-link{display:none !important} #btn-copy-link{display:none !important}";
+      document.head.appendChild(stl);
+      var note = document.createElement("div");
+      note.className = "note";
+      note.innerHTML = "📁 Ouvert depuis un fichier : le lien d'invitation ne mènerait nulle part, il est masqué. " +
+        "<strong>Transmettez le code ci-dessus</strong> — votre adversaire doit avoir le même fichier de jeu sur son poste.";
+      var hs = $("net-step-host");
+      if (hs && $("host-status")) hs.insertBefore(note, $("host-status"));
+    }
+
+    renderSound();
+
+    /* Invitation reçue par lien */
+    const room = new URLSearchParams(location.search).get("room");
+    $("net-modal").classList.add("show");
+    if (room) {
+      $("net-step-choice").style.display = "none";
+      $("net-step-join").style.display = "block";
+      $("join-code").value = room.toUpperCase().slice(0, 5);
+      $("inp-nick").value = "Joueur 2";
+      showJoinStatus("Invitation détectée : saisissez votre pseudo puis cliquez sur « Se connecter ».");
+    }
+  }
+
+
+  /* ══════════════════════════════════════════════════════════════════════
+     MODULE DE JEU — CARROM (duel, 2 joueurs)
+     Le tir est le seul message échangé : position et vitesse du palet,
+     arrondies à 1e-6. Les deux postes déroulent ensuite EXACTEMENT la même
+     physique (uniquement +, −, ×, ÷ et racine carrée, jamais de fonction
+     trigonométrique en cours de simulation, donc résultat identique sur
+     tous les moteurs). L'hôte renvoie un instantané complet au repos, à
+     titre de resynchronisation.
+     ══════════════════════════════════════════════════════════════════════ */
+  GAME.prefix = "carrom-p2p-";
+
+  const DT = 1 / 120;                 /* pas fixe fin : chocs bien résolus */
+  const PR = 0.0265, SR = 0.0340;     /* rayons : pion, palet */
+  const MP = 1, MS = 1.65;            /* masses */
+  const DAMP = 0.9875, STOP = 0.016, REST = 0.94;
+  const PK = 0.055, PKR = 0.050;      /* trous : centre et rayon */
+  const BASE_Y = 0.845, BASE_X0 = 0.245, BASE_X1 = 0.755;
+  const MAXSIM = 8;                  /* secondes de simulation au maximum */
+
+  const cv = $("stage"), ctx = cv.getContext("2d");
+  const hud = $("hud"), hudBig = $("hud-big"), hudSub = $("hud-sub");
+
+  const K = {
+    P: [],                 /* 0 = palet, puis les 19 pièces */
+    turn: 1, phase: "idle",/* idle | aim | sim | over */
+    pts: [0, 0], queen: 0, qPending: 0,
+    pocketed: [], moves: 0,
+    aiming: false, ax: 0, ay: 0, placing: false,
+    acc: 0, last: 0, simT: 0, simStart: 0, lastClack: 0,
+    pending: null, beat: null
+  };
+
+  /* ── Réglages du bandeau ── */
+  function isSolo() { return $("sel-mode").value === "1"; }
+  GAME.solo = isSolo;
+  function myRole() { return (NET.mode === "guest") ? 2 : 1; }
+  /* Rotation PUREMENT LOCALE : la partie reste dans son repère canonique
+     (ligne de l'hôte en bas), seuls l'affichage et la saisie tournent. */
+  function rot() {
+    const c = $("sel-view").value;
+    const m1 = { bottom: 0, left: 90, top: 180, right: 270 };
+    const m2 = { top: 0, right: 90, bottom: 180, left: 270 };
+    return (myRole() === 1 ? m1 : m2)[c];
+  }
+  function maxPower() { return parseFloat($("sel-power").value) || 2.0; }
+  function guideLen() { return parseFloat($("sel-guide").value); }
+  function myColor() { return isSolo() ? "w" : NET.mode === "local" ? (K.turn === 1 ? "w" : "b") : (NET.myRole === 1 ? "w" : "b"); }
+  function colorOf(p) { return p === 1 ? "w" : "b"; }
+  function baseY(p) { return p === 1 ? BASE_Y : 1 - BASE_Y; }
+  const r6 = (v) => Math.round(v * 1e6) / 1e6;
+
+  /* ── Mise en place : positions arrondies, donc rigoureusement identiques ── */
+  function layout() {
+    const P = [];
+    P.push({ t: "s", x: 0.5, y: BASE_Y, vx: 0, vy: 0, r: SR, m: MS, in: true });
+    P.push({ t: "q", x: 0.5, y: 0.5, vx: 0, vy: 0, r: PR, m: MP, in: true });
+    const ring = (n, dist, swap) => {
+      for (let i = 0; i < n; i++) {
+        const a = (i / n) * Math.PI * 2 + Math.PI / 2;
+        P.push({
+          t: ((i % 2 === 0) !== swap) ? "w" : "b",
+          x: r6(0.5 + Math.cos(a) * dist), y: r6(0.5 + Math.sin(a) * dist),
+          vx: 0, vy: 0, r: PR, m: MP, in: true
+        });
+      }
+    };
+    ring(6, r6(2 * PR), false);
+    ring(12, r6(4 * PR), true);
+    return P;
+  }
+  function countOn(c) { let n = 0; for (let i = 1; i < K.P.length; i++) if (K.P[i].in && K.P[i].t === c) n++; return n; }
+
+  /* ── Physique ── */
+  const POCKETS = [[PK, PK], [1 - PK, PK], [PK, 1 - PK], [1 - PK, 1 - PK]];
+
+  function clack() {
+    const now = Date.now();
+    if (now - K.lastClack > 55) { K.lastClack = now; snd("bounce"); }
+  }
+
+  function physics() {
+    const P = K.P;
+    for (let i = 0; i < P.length; i++) {
+      const a = P[i]; if (!a.in) continue;
+      a.x += a.vx * DT; a.y += a.vy * DT;
+      a.vx *= DAMP; a.vy *= DAMP;
+      if (a.vx * a.vx + a.vy * a.vy < STOP * STOP) { a.vx = 0; a.vy = 0; }
+      /* bandes */
+      if (a.x < a.r) { a.x = a.r; a.vx = -a.vx * REST; clack(); }
+      if (a.x > 1 - a.r) { a.x = 1 - a.r; a.vx = -a.vx * REST; clack(); }
+      if (a.y < a.r) { a.y = a.r; a.vy = -a.vy * REST; clack(); }
+      if (a.y > 1 - a.r) { a.y = 1 - a.r; a.vy = -a.vy * REST; clack(); }
+    }
+    /* chocs, dans un ordre fixe */
+    for (let i = 0; i < P.length; i++) {
+      const a = P[i]; if (!a.in) continue;
+      for (let j = i + 1; j < P.length; j++) {
+        const b = P[j]; if (!b.in) continue;
+        let dx = b.x - a.x, dy = b.y - a.y;
+        const rr = a.r + b.r;
+        let d2 = dx * dx + dy * dy;
+        if (d2 >= rr * rr || d2 === 0) continue;
+        const d = Math.sqrt(d2);
+        const nx = dx / d, ny = dy / d;
+        /* séparation proportionnelle aux masses */
+        const overlap = rr - d, tm = a.m + b.m;
+        a.x -= nx * overlap * (b.m / tm); a.y -= ny * overlap * (b.m / tm);
+        b.x += nx * overlap * (a.m / tm); b.y += ny * overlap * (a.m / tm);
+        const rvx = b.vx - a.vx, rvy = b.vy - a.vy;
+        const vn = rvx * nx + rvy * ny;
+        if (vn > 0) continue;
+        const imp = -(1 + REST) * vn / (1 / a.m + 1 / b.m);
+        a.vx -= imp * nx / a.m; a.vy -= imp * ny / a.m;
+        b.vx += imp * nx / b.m; b.vy += imp * ny / b.m;
+        if (imp > 0.25) clack();
+      }
+    }
+    /* trous */
+    for (let i = 0; i < P.length; i++) {
+      const a = P[i]; if (!a.in) continue;
+      for (let k = 0; k < 4; k++) {
+        const dx = a.x - POCKETS[k][0], dy = a.y - POCKETS[k][1];
+        if (dx * dx + dy * dy < PKR * PKR) {
+          a.in = false; a.vx = 0; a.vy = 0;
+          K.pocketed.push(a.t);
+          snd(a.t === "s" ? "error" : "point");
+          break;
+        }
+      }
+    }
+  }
+  function atRest() {
+    for (let i = 0; i < K.P.length; i++) { const a = K.P[i]; if (a.in && (a.vx !== 0 || a.vy !== 0)) return false; }
+    return true;
+  }
+
+  /* ── Replacer une pièce au centre (reine renvoyée, pénalité) ── */
+  function replaceCentre(type) {
+    const spots = [[0.5, 0.5]];
+    for (let ring = 1; ring <= 6; ring++) {
+      for (let i = 0; i < 8; i++) {
+        const a = (i / 8) * Math.PI * 2;
+        spots.push([r6(0.5 + Math.cos(a) * 2 * PR * ring), r6(0.5 + Math.sin(a) * 2 * PR * ring)]);
+      }
+    }
+    for (let s = 0; s < spots.length; s++) {
+      let free = true;
+      for (let i = 0; i < K.P.length; i++) {
+        const p = K.P[i]; if (!p.in) continue;
+        const dx = p.x - spots[s][0], dy = p.y - spots[s][1];
+        if (dx * dx + dy * dy < (p.r + PR) * (p.r + PR)) { free = false; break; }
+      }
+      if (!free) continue;
+      for (let i = 1; i < K.P.length; i++) {
+        const p = K.P[i];
+        if (!p.in && p.t === type) { p.x = spots[s][0]; p.y = spots[s][1]; p.vx = p.vy = 0; p.in = true; return true; }
+      }
+      return false;
+    }
+    return false;
+  }
+
+  /* ── Entraînement : un seul joueur, on rentre ses neuf blancs ── */
+  function bestStrokes() { try { return parseInt(localStorage.getItem("carrom.best") || "0", 10) || 0; } catch (e) { return 0; } }
+  function setBestStrokes(v) { try { localStorage.setItem("carrom.best", String(v)); } catch (e) {} }
+
+  function resolveSolo() {
+    const pk = K.pocketed;
+    const nOwn = pk.filter((x) => x === "w").length;
+    const nOpp = pk.filter((x) => x === "b").length;
+    const foul = pk.indexOf("s") >= 0;
+    const gotQ = pk.indexOf("q") >= 0;
+    const parts = [];
+
+    K.pts[0] += nOwn;
+    if (nOwn) parts.push(nOwn + " pion" + (nOwn > 1 ? "s" : ""));
+    for (let i = 0; i < nOpp; i++) replaceCentre("b");
+    if (nOpp) parts.push(nOpp + " noir rendu" + (nOpp > 1 ? "s" : ""));
+
+    if (gotQ) {
+      if (nOwn > 0) { K.queen = 1; K.qPending = 0; parts.push("reine couverte"); }
+      else { K.qPending = 1; parts.push("reine"); }
+    } else if (K.qPending === 1 && nOwn > 0) { K.queen = 1; K.qPending = 0; parts.push("reine couverte"); }
+
+    if (foul) {
+      parts.push("faute");
+      if (K.pts[0] > 0 && replaceCentre("w")) K.pts[0]--;
+      if (K.qPending) { K.qPending = 0; replaceCentre("q"); parts.push("reine rendue"); }
+    }
+
+    K.moves++;
+    addHist(K.moves, "🎯 " + S.names[0] + " (entraînement)", parts.length ? parts.join(", ") : "—");
+
+    const st = K.P[0];
+    st.in = true; st.vx = st.vy = 0; st.x = 0.5; st.y = baseY(1);
+    K.pocketed = [];
+
+    if (countOn("w") === 0) {
+      K.phase = "over"; stopTimer(); S.rounds++;
+      const b = bestStrokes(), rec = (b === 0 || K.moves < b);
+      if (rec) setBestStrokes(K.moves);
+      renderPlayers(); render();
+      snd(rec ? "win" : "count");
+      showOverlay({
+        title: rec ? "🏅 Nouveau record : " + K.moves + " coups" : "✅ Terminé en " + K.moves + " coups",
+        stats: [[K.moves, "Coups joués"], [rec ? K.moves : b, "Record"], [K.queen ? "oui" : "non", "Reine couverte"]],
+        nextLabel: "▶ Recommencer"
+      });
+      hudShow("🏁", "Les neuf pions blancs sont rentrés.");
+      return;
+    }
+    K.phase = "aim"; hudHide(); render();
+  }
+
+  /* ── Résolution d'un coup ── */
+  function resolveShot() {
+    if (isSolo()) return resolveSolo();
+    const sh = K.turn, own = colorOf(sh), opp = colorOf(3 - sh);
+    const pk = K.pocketed;
+    const nOwn = pk.filter((t) => t === own).length;
+    const nOpp = pk.filter((t) => t === opp).length;
+    const foul = pk.indexOf("s") >= 0;
+    const gotQ = pk.indexOf("q") >= 0;
+    const parts = [];
+
+    K.pts[sh - 1] += nOwn;
+    K.pts[(3 - sh) - 1] += nOpp;
+    if (nOwn) parts.push(nOwn + (nOwn > 1 ? " pions" : " pion"));
+    if (nOpp) parts.push(nOpp + " adverse" + (nOpp > 1 ? "s" : ""));
+
+    /* reine : à couvrir dans le même coup ou le suivant */
+    if (gotQ) {
+      parts.push("reine");
+      if (nOwn > 0) { K.queen = sh; K.qPending = 0; parts.push("couverte"); }
+      else K.qPending = sh;
+    } else if (K.qPending === sh && nOwn > 0) {
+      K.queen = sh; K.qPending = 0; parts.push("reine couverte");
+    }
+
+    /* faute : palet empoché, un pion revient au centre */
+    if (foul) {
+      parts.push("faute");
+      if (K.pts[sh - 1] > 0 && replaceCentre(own)) K.pts[sh - 1]--;
+    }
+
+    const keep = nOwn > 0 && !foul;
+
+    /* reine non couverte : elle retourne au centre dès que la main est perdue */
+    if (K.qPending === sh && !keep) { K.qPending = 0; replaceCentre("q"); parts.push("reine rendue"); }
+
+    K.moves++;
+    addHist(K.moves, (sh === 1 ? "🔵 " : "🔴 ") + S.names[sh - 1], parts.length ? parts.join(", ") : "—");
+
+    if (!keep) K.turn = 3 - sh;
+
+    /* palet repositionné pour le tireur suivant */
+    const st = K.P[0];
+    st.in = true; st.vx = st.vy = 0;
+    st.x = 0.5; st.y = baseY(K.turn);
+
+    K.pocketed = [];
+
+    /* fin de manche */
+    if (countOn("w") === 0 || countOn("b") === 0) {
+      const w = countOn("w") === 0 ? 1 : 2;
+      if (K.qPending) { K.qPending = 0; replaceCentre("q"); }
+      return finish(w);
+    }
+    K.phase = "aim";
+    hudHide();
+    render();
+    if (NET.mode === "host" && NET.connected) send({ t: "kstate", s: snap() });
+    if (K.pending) { const s = K.pending; K.pending = null; applySnap(s); }
+  }
+
+  function finish(w) {
+    K.phase = "over";
+    stopTimer();
+    S.rounds++; S.scores[w - 1]++;
+    const bonus = K.queen === w ? 3 : 0;
+    renderPlayers(); render();
+    snd(NET.mode === "local" || w === NET.myRole ? "win" : "lose");
+    showOverlay({
+      title: "🎉 " + S.names[w - 1] + " remporte la manche !",
+      stats: [[K.pts[0] + " — " + K.pts[1], "Pions empochés"],
+              [K.queen ? S.names[K.queen - 1] : "—", "Reine"],
+              [K.pts[w - 1] + bonus, "Points (reine +3)"]],
+      nextLabel: "▶ Manche suivante"
+    });
+    hudShow("🏁", S.names[w - 1] + " a rentré tous ses pions.");
+    if (NET.mode === "host" && NET.connected) send({ t: "kstate", s: snap() });
+  }
+
+  /* ── Tir ── */
+  function canPlayNow() {
+    if (K.phase !== "aim") return false;
+    if (isSolo()) return true;
+    if (NET.mode === "local") return true;
+    if (!NET.connected) return false;
+    return K.turn === NET.myRole;
+  }
+  function fire(vx, vy, sx) {
+    const st = K.P[0];
+    st.x = sx; st.y = baseY(K.turn); st.vx = vx; st.vy = vy;
+    K.phase = "sim"; K.simT = 0; K.acc = 0; K.last = 0; K.pocketed = []; K.simStart = Date.now();
+    snd("flap");
+    render();
+  }
+
+  function shoot(dirx, diry, power) {
+    const sp = maxPower() * power;
+    const vx = r6(dirx * sp), vy = r6(diry * sp), sx = r6(K.P[0].x);
+    if (NET.mode !== "local" && NET.connected) send({ t: "kshot", sx: sx, vx: vx, vy: vy });
+    fire(vx, vy, sx);
+  }
+
+  /* ── Boucle ── */
+  function frame(ts) {
+    requestAnimationFrame(frame);
+    if (K.phase === "sim") {
+      /* garde-fou : une simulation ne doit jamais rester en suspens, sinon
+         les deux joueurs se retrouvent bloqués sur « ce n'est pas votre tour » */
+      if (Date.now() - K.simStart > 12000) {
+        for (let i = 0; i < K.P.length; i++) { K.P[i].vx = 0; K.P[i].vy = 0; }
+        resolveShot();
+        draw(); return;
+      }
+      if (!K.last) K.last = ts;
+      let dt = (ts - K.last) / 1000; K.last = ts;
+      if (dt > 0.2) dt = 0.2;
+      K.acc += dt;
+      let guard = 0;
+      while (K.acc >= DT && K.phase === "sim" && guard++ < 40) {
+        physics(); K.acc -= DT; K.simT += DT;
+        if (atRest() || K.simT > MAXSIM) { for (let i = 0; i < K.P.length; i++) { K.P[i].vx = 0; K.P[i].vy = 0; } resolveShot(); break; }
+      }
+    }
+    draw();
+  }
+
+  /* ── Dessin ── */
+  let MARG = 0, USZ = 1, BAND = 44;                           /* marge et côté utile, en pixels */
+  function T(x, y) {
+    const r = rot();
+    let a = x, b = y;
+    if (r === 90) { a = 1 - y; b = x; }
+    else if (r === 180) { a = 1 - x; b = 1 - y; }
+    else if (r === 270) { a = y; b = 1 - x; }
+    return [MARG + a * USZ, MARG + b * USZ];
+  }
+  function invT(px, py) {
+    const r = rot();
+    const a = (px - MARG) / USZ, b = (py - MARG) / USZ;
+    if (r === 0)   return { x: a, y: b };
+    if (r === 90)  return { x: b, y: 1 - a };
+    if (r === 180) return { x: 1 - a, y: 1 - b };
+    return { x: 1 - b, y: a };
+  }
+  /* sens du clavier : « touche vers la droite/le bas » → sens canonique en x */
+  function keySign() { const r = rot(); return (r === 0 || r === 90) ? 1 : -1; }
+  function segC(x0, y0, x1, y1) {
+    const A = T(x0, y0), B = T(x1, y1);
+    ctx.beginPath(); ctx.moveTo(A[0], A[1]); ctx.lineTo(B[0], B[1]); ctx.stroke();
+  }
+
+  function draw() {
+    const S = cv.width, u = S;                     /* le plateau est carré */
+    let gaugePw = 0;
+    ctx.clearRect(0, 0, cv.width, cv.height);
+
+    /* cadre bois — limité au carré, la bande du bas reste libre */
+    ctx.fillStyle = "#c98b3a"; ctx.fillRect(0, 0, S, S);
+    const m = u * 0.035;
+    const g = ctx.createLinearGradient(0, 0, 0, S);
+    g.addColorStop(0, "#fdf3e0"); g.addColorStop(1, "#f6e6c8");
+    ctx.fillStyle = g; ctx.fillRect(m, m, S - 2 * m, S - 2 * m);
+    MARG = m; USZ = S - 2 * m;
+    const U = USZ, C = T(0.5, 0.5);
+
+    /* décor : cercles et lignes de base */
+    ctx.strokeStyle = "#0284c7"; ctx.lineWidth = Math.max(1, u * 0.0035);
+    ctx.beginPath(); ctx.arc(C[0], C[1], U * 0.17, 0, 7); ctx.stroke();
+    ctx.beginPath(); ctx.arc(C[0], C[1], U * 0.035, 0, 7); ctx.stroke();
+    ctx.strokeStyle = "#b45309";
+    [1, 2].forEach((pl) => {
+      const by = baseY(pl), o = 0.022;
+      [-o, o].forEach((dy) => segC(BASE_X0, by + dy, BASE_X1, by + dy));
+      ctx.fillStyle = "#dc2626";
+      [BASE_X0, BASE_X1].forEach((bx) => {
+        const D = T(bx, by);
+        ctx.beginPath(); ctx.arc(D[0], D[1], U * 0.020, 0, 7); ctx.fill();
+      });
+    });
+
+    /* trous */
+    POCKETS.forEach((pk) => {
+      const D = T(pk[0], pk[1]);
+      ctx.fillStyle = "#1e293b";
+      ctx.beginPath(); ctx.arc(D[0], D[1], PKR * U, 0, 7); ctx.fill();
+      ctx.strokeStyle = "#8a5a1f"; ctx.lineWidth = Math.max(2, u * 0.006);
+      ctx.beginPath(); ctx.arc(D[0], D[1], PKR * U, 0, 7); ctx.stroke();
+    });
+
+    /* pièces */
+    const mine = myColor();
+    for (let i = K.P.length - 1; i >= 0; i--) {
+      const p = K.P[i]; if (!p.in) continue;
+      const D = T(p.x, p.y), cx = D[0], cy = D[1], rr = p.r * U;
+      ctx.save();
+      ctx.shadowColor = "#00000055"; ctx.shadowBlur = rr * 0.5; ctx.shadowOffsetY = rr * 0.18;
+      if (p.t === "s") { ctx.fillStyle = "#0284c7"; }
+      else if (p.t === "q") { ctx.fillStyle = "#dc2626"; }
+      else if (p.t === "w") { ctx.fillStyle = "#fffdf7"; }
+      else { ctx.fillStyle = "#243447"; }
+      ctx.beginPath(); ctx.arc(cx, cy, rr, 0, 7); ctx.fill();
+      ctx.restore();
+      ctx.lineWidth = Math.max(1, rr * 0.16);
+      ctx.strokeStyle = p.t === "w" ? "#c7b48a" : (p.t === "b" ? "#0d1522" : "#ffffff88");
+      ctx.beginPath(); ctx.arc(cx, cy, rr * 0.72, 0, 7); ctx.stroke();
+      if (K.phase === "aim" && (p.t === mine) && canPlayNow()) {
+        ctx.strokeStyle = "#16a34a"; ctx.lineWidth = Math.max(1.5, rr * 0.14);
+        ctx.beginPath(); ctx.arc(cx, cy, rr * 1.16, 0, 7); ctx.stroke();
+      }
+    }
+
+    /* visée */
+    if (K.phase === "aim" && K.aiming && canPlayNow()) {
+      const st = K.P[0];
+      let dx = st.x - K.ax, dy = st.y - K.ay;
+      const d = Math.sqrt(dx * dx + dy * dy);
+      if (d > 0.0001) {
+        dx /= d; dy /= d;
+        const pw = Math.min(d / 0.30, 1);
+        const gl = guideLen();
+        if (gl > 0) {
+          ctx.setLineDash([U * 0.014, U * 0.014]);
+          ctx.strokeStyle = "#0284c7"; ctx.lineWidth = Math.max(2, U * 0.006);
+          segC(st.x, st.y, st.x + dx * gl, st.y + dy * gl);
+          ctx.setLineDash([]);
+        }
+        /* élastique */
+        ctx.strokeStyle = "#dc2626"; ctx.lineWidth = Math.max(2, U * 0.005);
+        segC(st.x, st.y, K.ax, K.ay);
+        gaugePw = pw;
+      }
+    }
+
+    drawGauge(gaugePw, S);
+  }
+
+  /* Règle graduée de puissance, tracée dans la bande réservée SOUS le
+     plateau : elle ne recouvre donc jamais un pion ni un trou. */
+  function drawGauge(pw, S) {
+    const y = S, hB = BAND;
+    ctx.fillStyle = "#e6f6fd";
+    ctx.fillRect(0, y, S, hB);
+    ctx.strokeStyle = "#7dd3f0"; ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.moveTo(0, y + 0.5); ctx.lineTo(S, y + 0.5); ctx.stroke();
+
+    const pad = S * 0.05;
+    const w = S - 2 * pad - S * 0.30;
+    const hh = hB * 0.34, x0 = pad, y0 = y + hB * 0.50;
+
+    ctx.fillStyle = "#ffffff";
+    ctx.strokeStyle = "#0a5b80"; ctx.lineWidth = Math.max(1.2, S * 0.003);
+    ctx.beginPath();
+    if (ctx.roundRect) ctx.roundRect(x0, y0, w, hh, hh * 0.35); else ctx.rect(x0, y0, w, hh);
+    ctx.fill(); ctx.stroke();
+
+    if (pw > 0) {
+      ctx.fillStyle = pw < 0.34 ? "#16a34a" : (pw < 0.67 ? "#ca8a04" : "#dc2626");
+      ctx.beginPath();
+      const fw = Math.max(2, (w - 4) * pw);
+      if (ctx.roundRect) ctx.roundRect(x0 + 2, y0 + 2, fw, hh - 4, (hh - 4) * 0.35);
+      else ctx.rect(x0 + 2, y0 + 2, fw, hh - 4);
+      ctx.fill();
+    }
+
+    ctx.strokeStyle = "#0a5b80"; ctx.lineWidth = 1;
+    for (let i = 1; i < 10; i++) {
+      const x = x0 + (w * i) / 10, tall = (i % 5 === 0) ? 0.66 : 0.36;
+      ctx.beginPath();
+      ctx.moveTo(x, y0 + hh); ctx.lineTo(x, y0 + hh - hh * tall); ctx.stroke();
+    }
+
+    ctx.font = "900 " + Math.round(hB * 0.26) + "px 'Segoe UI', Arial, sans-serif";
+    ctx.textAlign = "left"; ctx.textBaseline = "middle";
+    ctx.fillStyle = "#0a5b80";
+    ctx.fillText("PUISSANCE  ·  " + powerName().toUpperCase(), x0, y + hB * 0.26);
+    ctx.textAlign = "right";
+    ctx.font = "900 " + Math.round(hB * 0.42) + "px 'Courier New', monospace";
+    ctx.fillStyle = pw > 0 ? "#0284c7" : "#93b8c9";
+    ctx.fillText(Math.round(pw * 100) + " %", S - pad, y + hB * 0.52);
+    ctx.textAlign = "center"; ctx.textBaseline = "alphabetic";
+  }
+  function powerName() {
+    const s = $("sel-power"), o = s ? s.options[s.selectedIndex] : null;
+    return o ? o.textContent.toLowerCase() : "";
+  }
+
+  function hudShow(big, sub) { hud.classList.remove("hidden"); hudBig.textContent = big; hudSub.innerHTML = sub; }
+  function hudHide() { hud.classList.add("hidden"); }
+
+  function render() {
+    const mine = myColor();
+    setStat("st-turn", K.phase === "idle" || K.phase === "over" ? "—" :
+      (isSolo() ? "Entraînement — " + K.moves + " coups"
+                : S.names[K.turn - 1] + (NET.mode !== "local" && K.turn === NET.myRole ? " (vous)" : "")));
+    setStat("st-left", K.phase === "idle" ? "—" :
+      (isSolo() ? countOn("w") + " blancs"
+                : (NET.mode === "local" ? countOn("w") + " / " + countOn("b") : countOn(mine))));
+    setStat("st-queen", K.qPending ? "à couvrir" : (K.queen ? S.names[K.queen - 1] : "en jeu"));
+    setStat("st-score", S.scores[0] + " — " + S.scores[1]);
+    $("pc-1").classList.toggle("active", K.phase !== "idle" && K.phase !== "over" && K.turn === 1);
+    $("pc-2").classList.toggle("active", K.phase !== "idle" && K.phase !== "over" && K.turn === 2);
+    $("pc-score-1").textContent = S.scores[0];
+    $("pc-score-2").textContent = S.scores[1];
+    if (K.phase === "idle") { setGain(1, ""); setGain(2, ""); }
+    else if (isSolo()) { setGain(1, K.pts[0] + " pions · " + K.moves + " coups"); setGain(2, ""); }
+    else {
+      const q = (pl) => K.queen === pl ? " · reine" : (K.qPending === pl ? " · reine à couvrir" : "");
+      setGain(1, K.pts[0] + " pion" + (K.pts[0] > 1 ? "s" : "") + q(1));
+      setGain(2, K.pts[1] + " pion" + (K.pts[1] > 1 ? "s" : "") + q(2));
+    }
+  }
+  GAME.render = render;
+
+  /* ── Manches ── */
+  function newRound() {
+    K.P = layout();
+    K.turn = isSolo() ? 1 : ((S.rounds % 2 === 0) ? 1 : 2);
+    K.pts = [0, 0]; K.queen = 0; K.qPending = 0;
+    K.pocketed = []; K.moves = 0; K.phase = "aim"; K.aiming = false; K.pending = null;
+    K.P[0].y = baseY(K.turn);
+    clearHist();
+    resetTimer(); startTimer();
+    hideOverlay(); hudHide();
+    snd("click");
+    render(); renderPlayers();
+    if (NET.mode === "host" && NET.connected) send({ t: "kstate", s: snap() });
+  }
+  GAME.onStart = newRound;
+  GAME.onNext = newRound;
+  GAME.onQuit = function () {
+    K.phase = "idle"; stopTimer(); resetTimer();
+    K.P = layout(); K.pts = [0, 0]; K.queen = 0; K.qPending = 0;
+    hideOverlay(); clearHist();
+    hudShow("⚪", "Partie arrêtée. Lancez une manche pour repartir.");
+    if (NET.mode === "host" && NET.connected) send({ t: "kquit" });
+    renderCommon();
+  };
+
+  /* ── Réseau ── */
+  function snap() {
+    return {
+      P: K.P.map((p) => [r6(p.x), r6(p.y), p.in ? 1 : 0, p.t]),
+      turn: K.turn, pts: K.pts.slice(), queen: K.queen, qPending: K.qPending,
+      moves: K.moves, phase: K.phase, scores: S.scores.slice(), rounds: S.rounds
+    };
+  }
+  function applySnap(s) {
+    /* si c'est mon tour et que je suis en train de placer mon palet, on ne
+       le fait pas sauter : seule la position des pièces fait autorité */
+    const keepX = (s.phase === "aim" && s.turn === NET.myRole) ? K.P[0].x : null;
+    if (K.P.length !== s.P.length) K.P = layout();
+    s.P.forEach((d, i) => { const p = K.P[i]; p.x = d[0]; p.y = d[1]; p.in = !!d[2]; p.t = d[3]; p.vx = 0; p.vy = 0; });
+    K.turn = s.turn; K.pts = s.pts.slice(); K.queen = s.queen; K.qPending = s.qPending;
+    K.moves = s.moves; K.phase = s.phase;
+    S.scores = s.scores.slice(); S.rounds = s.rounds;
+    if (keepX !== null) K.P[0].x = keepX;
+    render(); renderPlayers();
+  }
+  GAME.onData = function (d) {
+    switch (d.t) {
+      case "kshot":
+        if (K.phase === "sim") { setTimeout(() => GAME.onData(d), 150); return; }
+        if (K.phase !== "aim") return;
+        fire(d.vx, d.vy, d.sx);
+        break;
+      case "kstate":
+        if (K.phase === "sim") { K.pending = d.s; return; }
+        /* battement de cœur de l'hôte : sans écart, on ne touche à rien */
+        if (d.s.moves === K.moves && d.s.turn === K.turn && d.s.phase === K.phase && K.phase === "aim") return;
+        applySnap(d.s);
+        if (d.s.phase === "over") {
+          const w = d.s.pts && countOn("w") === 0 ? 1 : 2;
+          showOverlay({
+            title: "🎉 " + S.names[w - 1] + " remporte la manche !",
+            stats: [[d.s.pts[0] + " — " + d.s.pts[1], "Pions empochés"],
+                    [d.s.queen ? S.names[d.s.queen - 1] : "—", "Reine"]]
+          });
+          hudShow("🏁", "Manche terminée.");
+        } else { hideOverlay(); hudHide(); if (!timerId) startTimer(); }
+        break;
+      case "kquit":
+        GAME.onQuit();
+        break;
+    }
+  };
+  GAME.onConnected = function () { if (NET.mode === "host" && K.phase !== "idle") send({ t: "kstate", s: snap() }); };
+  /* L'hôte fait autorité : il rappelle l'état toutes les trois secondes
+     quand la table est immobile. Tout désaccord se répare de lui-même. */
+  function startBeat() {
+    if (K.beat) clearInterval(K.beat);
+    K.beat = setInterval(function () {
+      if (NET.mode === "host" && NET.connected && K.phase === "aim") send({ t: "kstate", s: snap() });
+    }, 3000);
+  }
+  GAME.onDisconnected = function () { msg("Adversaire déconnecté — retour possible au menu ou au mode local."); };
+  GAME.onModeChange = function () {
+    K.phase = "idle"; K.P = layout();
+    hudShow("⚪", "Choisissez « Lancer la manche » pour commencer.");
+  };
+
+  /* ── Redimensionnement et commandes ── */
+  function resize() {
+    const wrap = $("stage-wrap");
+    let side = Math.min(wrap.clientWidth, wrap.clientHeight / 1.11);
+    side = Math.max(260, side);
+    BAND = Math.max(34, Math.round(side * 0.10));
+    cv.width = Math.round(side);
+    cv.height = Math.round(side) + BAND;
+    draw();
+  }
+  window.addEventListener("resize", resize);
+
+  function toBoard(e) {
+    const r = cv.getBoundingClientRect();
+    const px = (e.clientX - r.left) / r.width * cv.width;
+    const py = (e.clientY - r.top) / r.height * cv.height;
+    return invT(px, py);
+  }
+  function nearBase(p) { return Math.abs(p.y - baseY(K.turn)) < 0.075; }
+
+  GAME.init = function () {
+    K.P = layout();
+    resize();
+    startBeat();
+
+    cv.addEventListener("pointerdown", (e) => {
+      e.preventDefault();
+      if (!canPlayNow()) { if (K.phase === "aim") msg("Ce n'est pas votre tour."); return; }
+      const p = toBoard(e);
+      const dxs = p.x - K.P[0].x, dys = p.y - K.P[0].y;
+      const onStriker = dxs * dxs + dys * dys < (SR * 2.2) * (SR * 2.2);
+      if (!onStriker && nearBase(p)) {
+        K.placing = true;
+        K.P[0].x = clamp(p.x, BASE_X0, BASE_X1);
+        render();
+      } else {
+        K.aiming = true; K.ax = p.x; K.ay = p.y;
+      }
+      try { cv.setPointerCapture(e.pointerId); } catch (err) {}
+    });
+    cv.addEventListener("pointermove", (e) => {
+      if (!K.placing && !K.aiming) return;
+      const p = toBoard(e);
+      if (K.placing) K.P[0].x = clamp(p.x, BASE_X0, BASE_X1);
+      else { K.ax = p.x; K.ay = p.y; }
+    });
+    const release = (e) => {
+      if (K.placing) { K.placing = false; return; }
+      if (!K.aiming) return;
+      K.aiming = false;
+      if (!canPlayNow()) return;
+      const st = K.P[0];
+      let dx = st.x - K.ax, dy = st.y - K.ay;
+      const d = Math.sqrt(dx * dx + dy * dy);
+      if (d < 0.035) { msg("Tirez le palet vers l'arrière pour armer le tir."); return; }
+      const pw = Math.min(d / 0.30, 1);
+      shoot(r6(dx / d), r6(dy / d), r6(pw));
+    };
+    cv.addEventListener("pointerup", release);
+    cv.addEventListener("pointercancel", () => { K.aiming = false; K.placing = false; });
+
+    document.addEventListener("keydown", (e) => {
+      if (/^(INPUT|TEXTAREA|SELECT)$/.test(document.activeElement.tagName)) return;
+      if (!canPlayNow()) return;
+      const sg = keySign();
+      if (e.code === "ArrowLeft" || e.code === "ArrowUp") { K.P[0].x = clamp(K.P[0].x - sg * 0.012, BASE_X0, BASE_X1); e.preventDefault(); }
+      if (e.code === "ArrowRight" || e.code === "ArrowDown") { K.P[0].x = clamp(K.P[0].x + sg * 0.012, BASE_X0, BASE_X1); e.preventDefault(); }
+    });
+
+    $("sel-view").addEventListener("change", () => { resize(); render(); });
+    $("sel-mode").addEventListener("change", () => { renderPlayers(); render(); });
+    hudShow("⚪", "Carrom — glissez <b>depuis le palet vers l'arrière</b> pour armer, relâchez pour tirer.<small>Un clic près de votre ligne de base déplace le palet ; les flèches aussi. L'orientation du plateau se règle dans le bandeau.</small>");
+    requestAnimationFrame(frame);
+    render();
+  };
+
+
+  /* ═══════════ INITIALISATION ═══════════ */
+  wireCore();
+  renderCommon();
+  if (GAME.init) GAME.init();
+})();
+</script>
+</body>
+</html>
